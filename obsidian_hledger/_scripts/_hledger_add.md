@@ -104,7 +104,7 @@ function get_default_amount() {
     else {
         var amount = 0;
         for (var i = 0; i < account_data_list.length; i++) {
-            var old_amount = account_data_list[i].amount.replace(",", "");
+            var old_amount = account_data_list[i].amount.replaceAll(",", "");
             amount += parseFloat(old_amount);
         }
 		if (amount == 0) {
