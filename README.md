@@ -29,7 +29,7 @@ This readme file assumes you know how to use Obsidian and you are already famili
 ![20220607015322.png](images/20220607015322.png)
 7. Type account name or choose from dropdown:
 ![20220607015438.png](images/20220607015438.png)
-8. Enter amount. Valid inputs: 1000, 1,000, 1k, 1000$, 1000 USD, 1000USD, 10000.23 $
+8. Enter amount. Valid inputs: `1000, 1,000, 1k, 1000$, 1000 USD, 1000USD, 10000.23 $`
 ![20220607015644.png](images/20220607015644.png)
 9. Repeat for Account 2 and Amount 2.
 10. Click Enter if you want to add more transactions:
