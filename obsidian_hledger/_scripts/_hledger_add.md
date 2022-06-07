@@ -40,7 +40,7 @@ function get_currency_symbol(input_amount) {
 
 
 function format_amount_as_currency(amount, currency_symbol) {
-    amount = amount.toString().replace(",","");
+    amount = amount.toString().replaceAll(",","");
     return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,") + " " + currency_symbol;
 }
 
