@@ -120,7 +120,7 @@ function get_default_amount() {
 async function prompt_account_entry(account_num, account_list) {
     account_placeholder = "Account " + account_num;
     amount_placeholder = "Amount " + account_num;
-    var account = await tp.system.suggester(items = accounts_list, text_items = accounts_list, limit = 10, placeholder = account_placeholder, throw_on_cancel=true);
+    var account = await tp.system.suggester(items = accounts_list, text_items = accounts_list, placeholder = account_placeholder, throw_on_cancel=true);
     default_amount = get_default_amount();
     var amount = NaN;
     var is_wrong = false;
