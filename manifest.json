@@ -1,9 +1,9 @@
 {
-    "id": "obsidian-hledger",
+    "id": "hledger-notes",
     "name": "Hledger Notes",
     "version": "1.0.0",
     "minAppVersion": "0.15.0",
-    "description": "Create and manage hledger entries directly in Obsidian",
+    "description": "Create and manage hledger entries directly in Daily notes",
     "author": "Boburmirzo Khamrakulov",
     "isDesktopOnly": false
 } 
