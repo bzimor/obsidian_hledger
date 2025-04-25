@@ -1,52 +1,92 @@
-# About this repository
-In this obisidian vault I implemented add transaction to hledger file or daily note functionality using Templater.
-This readme file assumes you know how to use Obsidian and you are already familiar with hledger.
+# Obsidian Hledger
 
-# Features
-- Autocompleting accounts
-- Autodetecting transaction date from daily note
-- Adding multiple transactions at once
-- Autocalculating amounts
-- Amount validation
-- Adding amount with shortcuts, e.g. 13k instead of 1,300 or 24m instead of 24,000,000
-- Autoformatting amounts as currency
-- Autoformatting transaction line width
-- Adding transaction to daily note as code-snippet to make copying transaction easier
+A plugin for [Obsidian](https://obsidian.md) that allows you to create and manage [hledger](https://hledger.org/) transactions directly within your vault.
 
-# User manual
-1. Download this repository and open the folder obsidian_hledger on Obsidian as a vault and choose `Turn safe mode off` if it prompts to disable community plugins.
-2. Open any date from Calendar panel and create daily note.
-3. Place cursor after heading **Transactions**.
-4. Click `ALT+E` and choose `_hledger_add`:
+## Features
 
-![20220607015127.png](images/20220607015127.png)
+### Transaction Management
+- Create both regular and exchange transactions
+- Fuzzy account name suggestions from your accounts file
+- Automatic balance calculation for transaction entries
+- Support for multiple currencies
 
-5. Enter a date or just click Enter:
+### Daily Notes Integration
+- Automatically detect dates from daily note filenames
+- Organize transactions within daily notes using a dedicated section
+- Configurable date format for daily notes
 
-![20220607015223.png](images/20220607015223.png)
+### Import/Export Functionality
+- Export transactions from daily notes to hledger journal files
+- Import transactions from journal files back to daily notes
 
-6. Write description or just click Enter:
-![20220607015322.png](images/20220607015322.png)
-7. Type account name or choose from dropdown:
-![20220607015438.png](images/20220607015438.png)
-8. Enter amount. Valid inputs: `1000, 1,000, 1k, 1000$, 1000 USD, 1000USD, 10000.23 $`
-![20220607015644.png](images/20220607015644.png)
-9. Repeat for Account 2 and Amount 2.
-10. Click Enter if you want to add more transactions:
-![20220607015758.png](images/20220607015758.png)
-11. You can see the final output like this:
-![20220607020001.png](images/20220607020001.png)
+### Formatting Options
+- Configurable number formats:
+  - Comma-dot (1,234.56)
+  - Space-comma (1 234,56)
+  - Dot-comma (1.234,56)
+- Customizable currency placement (before/after amount)
+- Optional spacing between currency and amount
+- Configurable line length for transaction entries
 
-# Limitations
-- Prefix commodities are not supported
-- Balance correctness won't be checked
-- Exchange rates won't be parsed on conversions
+## Settings
 
-# Q&A
-- **Why journal file, accounts file are in `.md` file format?**
-	I discovered on [hledger's manual page](https://hledger.org/1.25/hledger.html#data-formats) that hledger detects the format automatically based on the file extensions shown above. If it can't recognise the file extension, it assumes journal format. So, `.md` format is ok for hledger
-- **Why do you keep hledger journal files in your Obsidian vault?**
-	I use Git plugin for my Obsidian vault and backuping my vault guarantees my journals are version controlled and safe. Also, it is easier to search something in my journal files via Obsidian search.
+### Daily Note Settings
+- Daily notes folder path
+- Date format for daily note filenames (using [Moment.js format](https://momentjs.com/docs/#/displaying/format/))
+- Transaction section header text
 
-## Diclaimer
-I am Python Developer and I don't have much experience in Javascript. So, I might did some stupid mistakes on my javascript code in `_hledger_add` file. Feel free to correct my mistakes or contribute to this repository.
+### Transaction Settings
+- List of available currencies
+- Option to include date in transactions
+- Transaction line length
+- Amount format (comma-dot, space-comma, dot-comma)
+- Currency placement (before/after amount)
+- Currency spacing
+
+### Hledger Settings
+- Journal folder path
+- Accounts file path
+- Hledger Date Format (using [Moment.js format](https://momentjs.com/docs/#/displaying/format/))
+
+## Usage
+
+### Adding Transactions
+1. Click the "$" icon in the ribbon or use the command "Add hledger Entry"
+2. Select transaction type (regular or exchange)
+3. Enter date and description
+4. Add account entries with amounts and currencies
+5. Click "Submit" to save
+
+### Managing Accounts
+- Create an accounts file (e.g., `accounts`)
+- List accounts using the format: `account Assets:Bank`
+- Set the accounts file path in plugin settings
+
+### Exporting to Journal
+1. Use the "Export transactions from daily notes to journal file" command
+2. Select date range
+3. Enter journal filename
+4. Choose whether to replace existing file
+
+### Importing from Journal
+1. Use the "Import transactions from journal file to daily notes" command
+2. Select date range
+3. Choose source journal file
+4. Transactions will be imported to corresponding daily notes
+
+## Installation
+
+1. Open Obsidian Settings
+2. Navigate to Community Plugins
+3. Search for "Hledger"
+4. Click Install
+5. Enable the plugin
+
+## Requirements
+
+- Obsidian v0.15.0 or higher
+- For optimal use, familiarity with hledger's journal format
+
+## License
+
+This project is licensed under the MIT License. 

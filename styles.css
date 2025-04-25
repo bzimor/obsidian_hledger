@@ -1,0 +1,199 @@
+.hledger-entries {
+    margin: 1em 0;
+}
+
+.hledger-entry {
+    border: 1px solid var(--background-modifier-border);
+    padding: 1em;
+    margin-bottom: 1em;
+    border-radius: 4px;
+    position: relative;
+}
+
+.hledger-entry button {
+    position: absolute;
+    top: 0.5em;
+    right: 0.5em;
+    padding: 0.25em 0.5em;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.hledger-entry button:hover {
+    background-color: var(--interactive-accent-hover);
+}
+
+.hledger-entry .setting-item {
+    margin-bottom: 0.5em;
+}
+
+.hledger-entry .setting-item:last-child {
+    margin-bottom: 0;
+}
+
+.hledger-entries-container {
+    margin: 1em 0;
+}
+
+.hledger-entry-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.hledger-account-input {
+    flex: 2;
+    min-width: 200px;
+}
+
+.hledger-amount-input {
+    flex: 1;
+    min-width: 100px;
+}
+
+.hledger-currency-select {
+    flex: 1;
+    min-width: 80px;
+}
+
+.hledger-delete-button {
+    background: none;
+    border: none;
+    color: #ff4444;
+    cursor: pointer;
+    padding: 0.25em;
+    font-size: 1.2em;
+}
+
+.hledger-delete-button:hover {
+    color: #ff0000;
+}
+
+.hledger-modal {
+    padding: 1em;
+}
+
+.hledger-date-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1em;
+    gap: 1em;
+}
+
+.hledger-type-toggle {
+    flex: 1;
+}
+
+.hledger-date-input {
+    width: 130px;
+}
+
+.hledger-description-input {
+    width: 100%;
+    margin-bottom: 1em;
+}
+
+.hledger-entries-container {
+    margin-bottom: 1em;
+}
+
+.hledger-entry-row {
+    display: flex;
+    gap: 0.5em;
+    margin-bottom: 0.5em;
+    align-items: center;
+}
+
+.hledger-account-input {
+    flex: 1;
+}
+
+.hledger-amount-input {
+    width: 120px;
+}
+
+.hledger-currency-select {
+    width: 80px;
+}
+
+.hledger-buttons-container {
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hledger-delete-button {
+    color: var(--text-error);
+}
+
+.hledger-add-account-button {
+    padding: 6px;
+    border-radius: 4px;
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+}
+
+.hledger-add-account-button:hover {
+    background-color: var(--background-modifier-active);
+}
+
+.hledger-export-modal {
+    padding: 1em;
+}
+
+.hledger-date-range {
+    display: flex;
+    gap: 1em;
+    margin-bottom: 1em;
+}
+
+.hledger-date-range .setting-item {
+    flex: 1;
+    border: none;
+    padding: 0;
+}
+
+.hledger-date-range .setting-item-info {
+    font-weight: var(--font-medium);
+}
+
+.hledger-date-range input[type="date"] {
+    width: 100%;
+}
+
+.settings-search {
+    position: relative;
+}
+
+.folder-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background-color: var(--background-modifier-hover);
+} 
