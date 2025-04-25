@@ -1,4 +1,4 @@
-# Obsidian Hledger
+# Hledger Notes
 
 A plugin for [Obsidian](https://obsidian.md) that allows you to create and manage [hledger](https://hledger.org/) transactions directly within your vault.
 
