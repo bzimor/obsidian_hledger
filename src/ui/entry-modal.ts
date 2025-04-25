@@ -215,7 +215,6 @@ export class HledgerEntryModal extends Modal {
             const file = this.app.vault.getAbstractFileByPath(accountsPath);
             if (file instanceof TFile) {
                 const content = await this.app.vault.read(file);
-                console.log('Accounts file content:', content);
                 
                 this.accounts = content
                     .split('\n')
@@ -227,7 +226,6 @@ export class HledgerEntryModal extends Modal {
                     })
                     .filter((account): account is string => account !== null);
                 
-                console.log('Parsed accounts:', this.accounts);
             } else {
                 console.log('Accounts file not found:', accountsPath);
             }

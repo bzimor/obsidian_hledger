@@ -184,21 +184,16 @@ export async function ensureDirectoryExists(directoryPath: string, adapter: Data
 
     try {
         if (!(await adapter.exists(directoryPath))) {
-            console.log(`Directory does not exist, attempting to create: ${directoryPath}`);
             try {
                 await adapter.mkdir(directoryPath);
-                console.log(`Successfully created directory: ${directoryPath}`);
             } catch (mkdirError) {
                 // Check again in case of race condition
                 if (!(await adapter.exists(directoryPath))) {
                     console.error(`Failed to create directory after checking again: ${directoryPath}`, mkdirError);
                     throw new Error(`Failed to create directory ${directoryPath}`);
                 } else {
-                    console.log(`Directory found after mkdir error (race condition handled): ${directoryPath}`);
                 }
             }
-        } else {
-            // console.log(`Directory already exists: ${directoryPath}`);
         }
     } catch (error) {
         // Catch errors from adapter.exists or the final throw
@@ -225,12 +220,10 @@ export async function updateOrCreateDailyNoteHledgerSection(
 ): Promise<void> {
     try {
         const fileExists = await adapter.exists(targetPath);
-        console.log(`Checking existence for ${targetPath}: ${fileExists}`);
         let finalContent = '';
 
         if (fileExists) {
             const file = await adapter.read(targetPath);
-            console.log(`Read existing file: ${targetPath}, length: ${file.length}`);
             const hledgerRegex = /```hledger\n([\s\S]*?)```/;
             const match = file.match(hledgerRegex);
 
@@ -247,17 +240,12 @@ export async function updateOrCreateDailyNoteHledgerSection(
             } else {
                 // Append a new block if none found
                 finalContent = file.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``; // Add header too when adding block first time
-                console.log(`Added new hledger block (with header) to ${targetPath}`);
             }
         } else {
             // Create new file with header and block
             finalContent = `${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
-            console.log(`Creating new file with hledger block: ${targetPath}`);
         }
-
-        console.log(`Attempting to write final content to ${targetPath}`);
         await adapter.write(targetPath, finalContent);
-        console.log(`Successfully wrote to ${targetPath}`);
 
     } catch (error) {
         console.error(`Error updating or creating daily note section in ${targetPath}:`, error);
