@@ -31,6 +31,11 @@ export class HledgerImportModal extends Modal {
 
         contentEl.createEl('h2', { text: 'Import transactions from hledger journal' });
 
+        contentEl.createEl("div", {
+            cls: "hledger-warning-note",
+            text: "Note: This action will override all transactions in your daily notes",
+          });
+        
         new Setting(contentEl)
             .setName('From date')
             .addText(text => {

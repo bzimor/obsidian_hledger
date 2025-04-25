@@ -47,8 +47,82 @@ export class HledgerSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        containerEl.createEl('h3', { text: 'Daily Note Settings' });
+        new Setting(containerEl)
+        .setName('Hledger folder path')
+        .setDesc('Path to the folder in your Obsidian vault where hledger files will be stored')
+        .addSearch(search => {
+            search
+                .setPlaceholder('hledger')
+                .setValue(this.plugin.settings.hledgerFolder)
+                .onChange(async (value) => {
+                    this.plugin.settings.hledgerFolder = value;
+                    await this.plugin.saveSettings();
+                });
+            
+            const folders = this.app.vault.getAllLoadedFiles()
+                .filter((f): f is TFolder => f instanceof TFolder)
+                .map(folder => folder.path);
+            
+            const searchEl = (search as any).containerEl as HTMLElement;
+            searchEl.addClass('hledger-settings-search');
+            
+            search.inputEl.addEventListener('focus', () => {
+                const currentValue = search.inputEl.value;
+                const suggestions = folders.filter(f => 
+                    f.toLowerCase().contains(currentValue.toLowerCase()));
+                
+                let suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
+                if (!suggestionsContainer) {
+                    suggestionsContainer = createDiv('hledger-folder-suggestions');
+                    searchEl.appendChild(suggestionsContainer);
+                } else {
+                    suggestionsContainer.empty();
+                }
+                
+                suggestions.forEach(suggestion => {
+                    const suggestionEl = suggestionsContainer.createDiv('hledger-suggestion-item');
+                    suggestionEl.setText(suggestion);
+                    suggestionEl.onClickEvent(() => {
+                        const event = new Event('input', { bubbles: true });
+                        search.inputEl.value = suggestion;
+                        search.inputEl.dispatchEvent(event);
+                        suggestionsContainer.remove();
+                    });
+                });
+            });
+            
+            document.addEventListener('click', (e) => {
+                const suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
+                if (suggestionsContainer && !searchEl.contains(e.target as Node)) {
+                    suggestionsContainer.remove();
+                }
+            });
+        });
 
+    new Setting(containerEl)
+        .setName('Hledger date format')
+        .setDesc('Format for dates in hledger journal entries (using moment.js format)')
+        .addText(text => text
+            .setPlaceholder('YYYY-MM-DD')
+            .setValue(this.plugin.settings.hledgerDateFormat)
+            .onChange(async (value) => {
+                this.plugin.settings.hledgerDateFormat = value;
+                await this.plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Accounts file name')
+        .setDesc('Name of the accounts file in Hledger folder that will be used for account autosuggestion')
+        .addText(text => text
+            .setPlaceholder('accounts.md')
+            .setValue(this.plugin.settings.accountsFile)
+            .onChange(async (value) => {
+                this.plugin.settings.accountsFile = value;
+                await this.plugin.saveSettings();
+            }));
+
+        new Setting(containerEl).setName('Daily notes').setHeading();
+        
         new Setting(containerEl)
             .setName('Daily notes folder')
             .setDesc('Path to the folder where daily transaction notes will be stored')
@@ -66,23 +140,23 @@ export class HledgerSettingTab extends PluginSettingTab {
                     .map(folder => folder.path);
                 
                 const searchEl = (search as any).containerEl as HTMLElement;
-                searchEl.addClass('settings-search');
+                searchEl.addClass('hledger-settings-search');
                 
                 search.inputEl.addEventListener('focus', () => {
                     const currentValue = search.inputEl.value;
                     const suggestions = folders.filter(f => 
                         f.toLowerCase().contains(currentValue.toLowerCase()));
                     
-                    let suggestionsContainer = searchEl.querySelector('.folder-suggestions');
+                    let suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
                     if (!suggestionsContainer) {
-                        suggestionsContainer = createDiv('folder-suggestions');
+                        suggestionsContainer = createDiv('hledger-folder-suggestions');
                         searchEl.appendChild(suggestionsContainer);
                     } else {
                         suggestionsContainer.empty();
                     }
                     
                     suggestions.forEach(suggestion => {
-                        const suggestionEl = suggestionsContainer.createDiv('suggestion-item');
+                        const suggestionEl = suggestionsContainer.createDiv('hledger-suggestion-item');
                         suggestionEl.setText(suggestion);
                         suggestionEl.onClickEvent(() => {
                             const event = new Event('input', { bubbles: true });
@@ -94,7 +168,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                 });
                 
                 document.addEventListener('click', (e) => {
-                    const suggestionsContainer = searchEl.querySelector('.folder-suggestions');
+                    const suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
                     if (suggestionsContainer && !searchEl.contains(e.target as Node)) {
                         suggestionsContainer.remove();
                     }
@@ -123,7 +197,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Transaction Settings' });
+        new Setting(containerEl).setName('Transactions').setHeading();
 
         new Setting(containerEl)
             .setName('Currencies')
@@ -195,80 +269,5 @@ export class HledgerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Hledger Settings' });
-
-        new Setting(containerEl)
-            .setName('Hledger folder path')
-            .setDesc('Path to the folder in your Obsidian vault where hledger files will be stored')
-            .addSearch(search => {
-                search
-                    .setPlaceholder('hledger')
-                    .setValue(this.plugin.settings.hledgerFolder)
-                    .onChange(async (value) => {
-                        this.plugin.settings.hledgerFolder = value;
-                        await this.plugin.saveSettings();
-                    });
-                
-                const folders = this.app.vault.getAllLoadedFiles()
-                    .filter((f): f is TFolder => f instanceof TFolder)
-                    .map(folder => folder.path);
-                
-                const searchEl = (search as any).containerEl as HTMLElement;
-                searchEl.addClass('settings-search');
-                
-                search.inputEl.addEventListener('focus', () => {
-                    const currentValue = search.inputEl.value;
-                    const suggestions = folders.filter(f => 
-                        f.toLowerCase().contains(currentValue.toLowerCase()));
-                    
-                    let suggestionsContainer = searchEl.querySelector('.folder-suggestions');
-                    if (!suggestionsContainer) {
-                        suggestionsContainer = createDiv('folder-suggestions');
-                        searchEl.appendChild(suggestionsContainer);
-                    } else {
-                        suggestionsContainer.empty();
-                    }
-                    
-                    suggestions.forEach(suggestion => {
-                        const suggestionEl = suggestionsContainer.createDiv('suggestion-item');
-                        suggestionEl.setText(suggestion);
-                        suggestionEl.onClickEvent(() => {
-                            const event = new Event('input', { bubbles: true });
-                            search.inputEl.value = suggestion;
-                            search.inputEl.dispatchEvent(event);
-                            suggestionsContainer.remove();
-                        });
-                    });
-                });
-                
-                document.addEventListener('click', (e) => {
-                    const suggestionsContainer = searchEl.querySelector('.folder-suggestions');
-                    if (suggestionsContainer && !searchEl.contains(e.target as Node)) {
-                        suggestionsContainer.remove();
-                    }
-                });
-            });
-
-        new Setting(containerEl)
-            .setName('Hledger date format')
-            .setDesc('Format for dates in hledger journal entries (using moment.js format)')
-            .addText(text => text
-                .setPlaceholder('YYYY-MM-DD')
-                .setValue(this.plugin.settings.hledgerDateFormat)
-                .onChange(async (value) => {
-                    this.plugin.settings.hledgerDateFormat = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Accounts file name')
-            .setDesc('Name of the accounts file in Hledger folder that will be used for account autosuggestion')
-            .addText(text => text
-                .setPlaceholder('accounts.md')
-                .setValue(this.plugin.settings.accountsFile)
-                .onChange(async (value) => {
-                    this.plugin.settings.accountsFile = value;
-                    await this.plugin.saveSettings();
-                }));
     }
 } 

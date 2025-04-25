@@ -119,12 +119,35 @@ export class HledgerEntryModal extends Modal {
         
         const leftButtons = buttonsContainer.createDiv('hledger-left-buttons');
         
+        const SVG_NS = "http://www.w3.org/2000/svg";
+
+        const svgEl = document.createElementNS(SVG_NS, "svg");
+        svgEl.setAttribute("xmlns", SVG_NS);
+        svgEl.setAttribute("width", "24");
+        svgEl.setAttribute("height", "24");
+        svgEl.setAttribute("viewBox", "0 0 24 24");
+        svgEl.setAttribute("fill", "none");
+        svgEl.setAttribute("stroke", "currentColor");
+        svgEl.setAttribute("stroke-width", "2");
+        svgEl.setAttribute("stroke-linecap", "round");
+        svgEl.setAttribute("stroke-linejoin", "round");
+        svgEl.setAttribute("class", "svg-icon lucide-plus");
+
+        const path1 = document.createElementNS(SVG_NS, "path");
+        path1.setAttribute("d", "M5 12h14");
+        svgEl.appendChild(path1);
+
+        const path2 = document.createElementNS(SVG_NS, "path");
+        path2.setAttribute("d", "M12 5v14");
+        svgEl.appendChild(path2);
         let addAccountButtonEl: HTMLElement | null = null;
-        if (!this.isExchange) {
+        
+        if (!this.isExchange) {        
             const addAccountButton = leftButtons.createEl('button', {
                 cls: 'hledger-add-account-button'
             });
-            addAccountButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>`;
+            addAccountButton.empty();
+            addAccountButton.appendChild(svgEl);
             addAccountButton.addEventListener('click', () => {
                 const lastEntry = this.entries[this.entries.length - 1];
                 const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
@@ -186,7 +209,8 @@ export class HledgerEntryModal extends Modal {
                     const addAccountButton = leftButtons.createEl('button', {
                         cls: 'hledger-add-account-button'
                     });
-                    addAccountButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>`;
+                    addAccountButton.empty();
+                    addAccountButton.appendChild(svgEl);
                     addAccountButton.addEventListener('click', () => {
                         const lastEntry = this.entries[this.entries.length - 1];
                         const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
@@ -296,7 +320,48 @@ export class HledgerEntryModal extends Modal {
                 const deleteButton = entryDiv.createEl('button', {
                     cls: 'clickable-icon hledger-delete-button'
                 });
-                deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-trash-2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+                const SVG_NS = "http://www.w3.org/2000/svg";
+
+                const svgEl2 = document.createElementNS(SVG_NS, "svg");
+                svgEl2.setAttribute("xmlns", SVG_NS);
+                svgEl2.setAttribute("width", "24");
+                svgEl2.setAttribute("height", "24");
+                svgEl2.setAttribute("viewBox", "0 0 24 24");
+                svgEl2.setAttribute("fill", "none");
+                svgEl2.setAttribute("stroke", "currentColor");
+                svgEl2.setAttribute("stroke-width", "2");
+                svgEl2.setAttribute("stroke-linecap", "round");
+                svgEl2.setAttribute("stroke-linejoin", "round");
+                svgEl2.setAttribute("class", "svg-icon lucide-trash-2");
+
+                const path1 = document.createElementNS(SVG_NS, "path");
+                path1.setAttribute("d", "M3 6h18");
+                svgEl2.appendChild(path1);
+
+                const path2 = document.createElementNS(SVG_NS, "path");
+                path2.setAttribute("d", "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6");
+                svgEl2.appendChild(path2);
+
+                const path3 = document.createElementNS(SVG_NS, "path");
+                path3.setAttribute("d", "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2");
+                svgEl2.appendChild(path3);
+
+                const line1 = document.createElementNS(SVG_NS, "line");
+                line1.setAttribute("x1", "10");
+                line1.setAttribute("y1", "11");
+                line1.setAttribute("x2", "10");
+                line1.setAttribute("y2", "17");
+                svgEl2.appendChild(line1);
+
+                const line2 = document.createElementNS(SVG_NS, "line");
+                line2.setAttribute("x1", "14");
+                line2.setAttribute("y1", "11");
+                line2.setAttribute("x2", "14");
+                line2.setAttribute("y2", "17");
+                svgEl2.appendChild(line2);
+
+                deleteButton.empty();
+                deleteButton.appendChild(svgEl2);
                 deleteButton.addEventListener('click', () => {
                     this.entries.splice(index, 1);
                     this.renderAccountEntries(container);

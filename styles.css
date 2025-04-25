@@ -171,11 +171,11 @@
     width: 100%;
 }
 
-.settings-search {
+.hledger-settings-search {
     position: relative;
 }
 
-.folder-suggestions {
+.hledger-folder-suggestions {
     position: absolute;
     top: 100%;
     left: 0;
@@ -189,11 +189,24 @@
     overflow-y: auto;
 }
 
-.suggestion-item {
+.hledger-suggestion-item {
     padding: 8px 12px;
     cursor: pointer;
 }
 
-.suggestion-item:hover {
+.hledger-suggestion-item:hover {
     background-color: var(--background-modifier-hover);
 } 
+
+.hledger-warning-note {
+    background-color: var(--text-warning);
+    color: var(--text-on-accent);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 1em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
