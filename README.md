@@ -87,6 +87,8 @@ A plugin for [Obsidian](https://obsidian.md) that allows you to create and manag
 - Obsidian v0.15.0 or higher
 - For optimal use, familiarity with hledger's journal format
 
-## License
+## Support
 
-This project is licensed under the MIT License. 
+Feel free to create Pull requests on this repo for fixes/improvement or you can buy me a coffee using this button
+
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="BuyMeACoffee" width="100">](https://www.buymeacoffee.com/bzimor)
