@@ -59,44 +59,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
             
-            const folders = this.app.vault.getAllLoadedFiles()
-                .filter((f): f is TFolder => f instanceof TFolder)
-                .map(folder => folder.path);
-            
-            const searchEl = (search as any).containerEl as HTMLElement;
-            searchEl.addClass('hledger-settings-search');
-            
-            search.inputEl.addEventListener('focus', () => {
-                const currentValue = search.inputEl.value;
-                const suggestions = folders.filter(f => 
-                    f.toLowerCase().contains(currentValue.toLowerCase()));
-                
-                let suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
-                if (!suggestionsContainer) {
-                    suggestionsContainer = createDiv('hledger-folder-suggestions');
-                    searchEl.appendChild(suggestionsContainer);
-                } else {
-                    suggestionsContainer.empty();
-                }
-                
-                suggestions.forEach(suggestion => {
-                    const suggestionEl = suggestionsContainer.createDiv('hledger-suggestion-item');
-                    suggestionEl.setText(suggestion);
-                    suggestionEl.onClickEvent(() => {
-                        const event = new Event('input', { bubbles: true });
-                        search.inputEl.value = suggestion;
-                        search.inputEl.dispatchEvent(event);
-                        suggestionsContainer.remove();
-                    });
-                });
-            });
-            
-            document.addEventListener('click', (e) => {
-                const suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
-                if (suggestionsContainer && !searchEl.contains(e.target as Node)) {
-                    suggestionsContainer.remove();
-                }
-            });
+            this.setupFolderAutocomplete(search);
         });
 
     new Setting(containerEl)
@@ -135,44 +98,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
                 
-                const folders = this.app.vault.getAllLoadedFiles()
-                    .filter((f): f is TFolder => f instanceof TFolder)
-                    .map(folder => folder.path);
-                
-                const searchEl = (search as any).containerEl as HTMLElement;
-                searchEl.addClass('hledger-settings-search');
-                
-                search.inputEl.addEventListener('focus', () => {
-                    const currentValue = search.inputEl.value;
-                    const suggestions = folders.filter(f => 
-                        f.toLowerCase().contains(currentValue.toLowerCase()));
-                    
-                    let suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
-                    if (!suggestionsContainer) {
-                        suggestionsContainer = createDiv('hledger-folder-suggestions');
-                        searchEl.appendChild(suggestionsContainer);
-                    } else {
-                        suggestionsContainer.empty();
-                    }
-                    
-                    suggestions.forEach(suggestion => {
-                        const suggestionEl = suggestionsContainer.createDiv('hledger-suggestion-item');
-                        suggestionEl.setText(suggestion);
-                        suggestionEl.onClickEvent(() => {
-                            const event = new Event('input', { bubbles: true });
-                            search.inputEl.value = suggestion;
-                            search.inputEl.dispatchEvent(event);
-                            suggestionsContainer.remove();
-                        });
-                    });
-                });
-                
-                document.addEventListener('click', (e) => {
-                    const suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
-                    if (suggestionsContainer && !searchEl.contains(e.target as Node)) {
-                        suggestionsContainer.remove();
-                    }
-                });
+                this.setupFolderAutocomplete(search);
             });
 
         new Setting(containerEl)
@@ -270,4 +196,97 @@ export class HledgerSettingTab extends PluginSettingTab {
                 }));
 
     }
-} 
+
+    private setupFolderAutocomplete(search: any): void {
+        const folders = this.app.vault.getAllLoadedFiles()
+            .filter((f): f is TFolder => f instanceof TFolder)
+            .map(folder => folder.path);
+        
+        const searchEl = (search as any).containerEl as HTMLElement;
+        searchEl.addClass('hledger-settings-search');
+        
+        // Track if suggestions are currently shown
+        let suggestionsShown = false;
+        
+        // Function to remove suggestions
+        const removeSuggestions = () => {
+            const suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
+            if (suggestionsContainer) {
+                suggestionsContainer.remove();
+                document.removeEventListener('click', documentClickHandler);
+                suggestionsShown = false;
+            }
+        };
+        
+        // Document click handler
+        const documentClickHandler = (e: MouseEvent) => {
+            if (!searchEl.contains(e.target as Node)) {
+                removeSuggestions();
+            }
+        };
+        
+        // Show suggestions
+        const showSuggestions = () => {
+            const currentValue = search.inputEl.value;
+            const suggestions = folders.filter(f => 
+                f.toLowerCase().contains(currentValue.toLowerCase()));
+            
+            // Remove any existing suggestions container
+            removeSuggestions();
+            
+            if (suggestions.length === 0) {
+                return;
+            }
+            
+            // Create a new suggestions container
+            const suggestionsContainer = createDiv('hledger-folder-suggestions');
+            searchEl.appendChild(suggestionsContainer);
+            suggestionsShown = true;
+            
+            // Add suggestions
+            suggestions.forEach(suggestion => {
+                const suggestionEl = suggestionsContainer.createDiv('hledger-suggestion-item');
+                suggestionEl.setText(suggestion);
+                
+                // Use mousedown instead of click to handle the event before blur
+                suggestionEl.addEventListener('mousedown', (e: MouseEvent) => {
+                    // Prevent default to avoid losing focus
+                    e.preventDefault();
+                    
+                    // Update the input value
+                    search.inputEl.value = suggestion;
+                    search.inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    // Remove suggestions
+                    removeSuggestions();
+                    
+                    // Return focus to the input
+                    setTimeout(() => {
+                        search.inputEl.focus();
+                        search.inputEl.blur();
+                    }, 10);
+                });
+            });
+            
+            // Add the document click handler
+            document.addEventListener('click', documentClickHandler);
+        };
+        
+        // Focus handler
+        search.inputEl.addEventListener('focus', showSuggestions);
+        
+        // Input handler
+        search.inputEl.addEventListener('input', showSuggestions);
+        
+        // Blur handler - delay to allow click events on suggestions
+        search.inputEl.addEventListener('blur', (e: FocusEvent) => {
+            // Small delay to allow click events on suggestions to fire first
+            setTimeout(() => {
+                // Only remove if the click wasn't on a suggestion
+                if (suggestionsShown && !(e.relatedTarget as Element)?.closest('.hledger-folder-suggestions')) {
+                    removeSuggestions();
+                }
+            }, 100);
+        });
+    }
+}

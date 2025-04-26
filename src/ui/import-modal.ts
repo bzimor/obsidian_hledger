@@ -19,9 +19,9 @@ export class HledgerImportModal extends Modal {
         this.onSubmit = onSubmit;
         
         const now = moment();
-        this.fromDate = now.startOf('year').format('YYYY-MM-DD');
+        this.fromDate = moment().startOf('year').format('YYYY-MM-DD');
         this.toDate = now.format('YYYY-MM-DD');
-        this.journalFile = `${now.format('YYYY')}.journal`;
+        this.journalFile = 'hledger.journal';
     }
 
     onOpen() {
@@ -29,7 +29,7 @@ export class HledgerImportModal extends Modal {
         contentEl.empty();
         contentEl.addClass('hledger-modal');
 
-        contentEl.createEl('h2', { text: 'Import transactions from hledger journal' });
+        contentEl.createEl('h4', { text: 'Import transactions from hledger journal' });
 
         contentEl.createEl("div", {
             cls: "hledger-warning-note",
@@ -50,17 +50,15 @@ export class HledgerImportModal extends Modal {
             .setName('To date')
             .addText(text => {
                 text.inputEl.type = 'date';
-                text.setValue(this.toDate)
-                    .onChange(async (value) => {
-                        this.toDate = value;
-                    });
+                text.setValue(this.toDate);
+                text.onChange(value => this.toDate = value);
             });
 
         new Setting(contentEl)
             .setName('Journal File')
             .setDesc('Journal file name to import transactions from')
             .addText(text => text
-                .setPlaceholder('2024.journal')
+                .setPlaceholder(this.journalFile)
                 .setValue(this.journalFile)
                 .onChange(async (value) => {
                     this.journalFile = value;

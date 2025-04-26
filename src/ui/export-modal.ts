@@ -3,17 +3,17 @@ import { HledgerSettings } from '../settings';
 import moment from 'moment';
 
 export class HledgerExportModal extends Modal {
+    settings: HledgerSettings;
     fromDate: string;
     toDate: string;
-    fileName: string;
+    journalFile: string;
     replaceExisting: boolean;
-    onSubmit: (fromDate: string, toDate: string, fileName: string, replaceExisting: boolean) => void;
-    settings: HledgerSettings;
+    onSubmit: (fromDate: string, toDate: string, journalFile: string, replaceExisting: boolean) => void;
 
     constructor(
         app: App,
         settings: HledgerSettings,
-        onSubmit: (fromDate: string, toDate: string, fileName: string, replaceExisting: boolean) => void
+        onSubmit: (fromDate: string, toDate: string, journalFile: string, replaceExisting: boolean) => void
     ) {
         super(app);
         this.settings = settings;
@@ -22,7 +22,7 @@ export class HledgerExportModal extends Modal {
         const now = moment();
         this.fromDate = moment().startOf('year').format('YYYY-MM-DD');
         this.toDate = now.format('YYYY-MM-DD');
-        this.fileName = now.format('YYYY') + '.journal';
+        this.journalFile = now.format('YYYY') + '.journal';
         this.replaceExisting = false;
     }
 
@@ -31,7 +31,7 @@ export class HledgerExportModal extends Modal {
         contentEl.empty();
         contentEl.addClass('hledger-export-modal');
 
-        contentEl.createEl('h2', { text: 'Export transactions to hledger journal' });
+        contentEl.createEl('h4', { text: 'Export transactions to hledger journal' });
 
         new Setting(contentEl)
             .setName('From date')
@@ -55,10 +55,10 @@ export class HledgerExportModal extends Modal {
             .addText((text: TextComponent) => {
                 text.inputEl.setAttribute('type', 'text');
                 text
-                    .setPlaceholder('transactions')
-                    .setValue(this.fileName)
+                    .setPlaceholder(this.journalFile)
+                    .setValue(this.journalFile)
                     .onChange((value) => {
-                        this.fileName = value;
+                        this.journalFile = value;
                     });
             });
 
@@ -78,20 +78,20 @@ export class HledgerExportModal extends Modal {
                 .setButtonText('Export')
                 .setCta()
                 .onClick(() => {
-                    const trimmedFileName = this.fileName.trim();
+                    const trimmedjournalFile = this.journalFile.trim();
 
-                    if (!trimmedFileName) {
+                    if (!trimmedjournalFile) {
                         new Notice('File name cannot be empty.');
                         return;
                     }
                     
                     const invalidCharsRegex = /[\\/:*?"<>|]/;
-                    if (invalidCharsRegex.test(trimmedFileName)) {
+                    if (invalidCharsRegex.test(trimmedjournalFile)) {
                         new Notice('File name contains invalid characters (e.g., \\ / : * ? " < > |).');
                         return;
                     }
 
-                    if (!this.fromDate || !this.toDate || !trimmedFileName) {
+                    if (!this.fromDate || !this.toDate || !trimmedjournalFile) {
                         new Notice('Please fill in all required fields.');
                         return;
                     }
@@ -101,7 +101,7 @@ export class HledgerExportModal extends Modal {
                         return;
                     }
 
-                    this.onSubmit(this.fromDate, this.toDate, this.fileName, this.replaceExisting);
+                    this.onSubmit(this.fromDate, this.toDate, this.journalFile, this.replaceExisting);
                     this.close();
                 })
         );
