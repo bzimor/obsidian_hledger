@@ -62,7 +62,10 @@ export class HledgerEntryModal extends Modal {
         }
         
         this.description = '';
-        this.entries = [{ account: '', amount: 0, currency: settings.currencies[0] }];
+        this.entries = [
+            { account: '', amount: 0, currency: settings.currencies[0] },
+            { account: '', amount: 0, currency: settings.currencies[0] }
+        ];
         this.isExchange = false;
         this.exchangeAmount = null;
     }
@@ -207,7 +210,10 @@ export class HledgerEntryModal extends Modal {
                     addAccountButtonEl = null;
                 }
             } else {
-                this.entries = [{ account: '', amount: 0, currency: this.settings.currencies[0] }];
+                this.entries = [
+                    { account: '', amount: 0, currency: this.settings.currencies[0] },
+                    { account: '', amount: 0, currency: this.settings.currencies[0] }
+                ];
                 if (!addAccountButtonEl) {
                     const addAccountButton = leftButtons.createEl('button', {
                         cls: 'hledger-add-account-button'
@@ -324,7 +330,7 @@ export class HledgerEntryModal extends Modal {
 
             const amountInput = entryDiv.createEl('input', {
                 type: 'text',
-                value: '',
+                value: entry.amount ? entry.amount.toString(): '',
                 placeholder: 'Amount',
                 cls: 'text-input hledger-amount-input'
             });
@@ -332,7 +338,24 @@ export class HledgerEntryModal extends Modal {
                 const target = e.target as HTMLInputElement;
                 let value = target.value.trim();
                 
-                // Handle 'k' and 'm' suffixes
+                // Remove all non-numeric characters except for decimal point, 'k', and 'm'
+                // First preserve the suffix if it exists
+                let suffix = '';
+                if (value.toLowerCase().endsWith('k')) {
+                    suffix = 'k';
+                    value = value.slice(0, -1);
+                } else if (value.toLowerCase().endsWith('m')) {
+                    suffix = 'm';
+                    value = value.slice(0, -1);
+                }
+                
+                // Remove unwanted characters, keep only digits and decimal point
+                value = value.replace(/[^\d.-]/g, '');
+                
+                // Add the suffix back
+                value = value + suffix;
+                
+                // Handle 'k' and 'm' suffixes for conversion
                 if (value.toLowerCase().endsWith('k')) {
                     value = value.slice(0, -1);
                     entry.amount = (parseFloat(value) || 0) * 1000;
@@ -343,6 +366,19 @@ export class HledgerEntryModal extends Modal {
                     target.value = entry.amount.toString();
                 } else {
                     entry.amount = parseFloat(value) || 0;
+                    target.value = entry.amount.toString();
+                }
+                
+                // Auto-set opposite amount in second row if there are exactly 2 rows and the second row's amount is empty
+                if (index === 0 && this.entries.length === 2) {
+                    const secondRow = this.entries[1];
+                    const secondAmountInput = container.querySelectorAll('.hledger-amount-input')[1] as HTMLInputElement;
+                    
+                    if (!secondRow.amount && secondAmountInput && (secondAmountInput.value === '' || secondAmountInput.value === '0')) {
+                        // Set opposite amount in second row
+                        secondRow.amount = -entry.amount;
+                        secondAmountInput.value = secondRow.amount.toString();
+                    }
                 }
             });
 
@@ -363,7 +399,7 @@ export class HledgerEntryModal extends Modal {
                 entry.currency = target.value;
             });
 
-            if (this.entries.length > 1 && !this.isExchange) {
+            if (this.entries.length > 2 && !this.isExchange) {
                 const deleteButton = entryDiv.createEl('button', {
                     cls: 'clickable-icon hledger-delete-button'
                 });
