@@ -35,7 +35,7 @@
 }
 
 .hledger-entries-container {
-    margin: 1em 0;
+    margin: 1em 0 1em 0;
 }
 
 .hledger-entry-row {
@@ -45,25 +45,71 @@
     margin-bottom: 0.5em;
 }
 
-.hledger-account-input {
+.hledger-account-input-container {
+    position: relative;
     flex: 2;
     min-width: 200px;
 }
 
+.hledger-account-input {
+    width: 100%;
+}
+
+.hledger-account-suggest-container {
+    position: absolute;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    margin-top: 2px;
+    scrollbar-width: thin;
+}
+
+.hledger-account-suggest-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.hledger-account-suggest-container::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-bg);
+    border-radius: 4px;
+}
+
+.hledger-account-suggest-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hledger-account-suggest-item:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.hledger-account-suggest-item.selected {
+    background-color: var(--background-secondary-alt);
+    color: var(--text-accent);
+}
+
 .hledger-amount-input {
-    flex: 1;
+    width: 120px;
     min-width: 100px;
 }
 
 .hledger-currency-select {
-    flex: 1;
-    min-width: 80px;
+    width: 80px;
+    height: 32px;
+    box-sizing: border-box;
 }
 
 .hledger-delete-button {
     background: none;
     border: none;
-    color: #ff4444;
+    color: var(--text-error);
     cursor: pointer;
     padding: 0.25em;
     font-size: 1.2em;
@@ -97,38 +143,11 @@
     margin-bottom: 1em;
 }
 
-.hledger-entries-container {
-    margin-bottom: 1em;
-}
-
-.hledger-entry-row {
-    display: flex;
-    gap: 0.5em;
-    margin-bottom: 0.5em;
-    align-items: center;
-}
-
-.hledger-account-input {
-    flex: 1;
-}
-
-.hledger-amount-input {
-    width: 120px;
-}
-
-.hledger-currency-select {
-    width: 80px;
-}
-
 .hledger-buttons-container {
     display: flex;
     gap: 0.5em;
     align-items: center;
     justify-content: space-between;
-}
-
-.hledger-delete-button {
-    color: var(--text-error);
 }
 
 .hledger-add-account-button {
@@ -208,5 +227,30 @@
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-  
+}
+
+/* Mobile styles for entry rows */
+@media screen and (max-width: 600px) {
+    .hledger-entry-row {
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: 1em;
+    }
+    
+    .hledger-account-input-container {
+        margin-bottom: 0.5em;
+        width: 100%;
+        flex: none;
+    }
+    
+    .hledger-amount-input {
+        margin-bottom: 0.5em;
+        width: 100% !important;
+        flex: none;
+    }
+    
+    .hledger-currency-select {
+        width: 100% !important;
+        flex: none;
+    }
+}

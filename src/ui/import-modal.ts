@@ -37,7 +37,7 @@ export class HledgerImportModal extends Modal {
           });
         
         new Setting(contentEl)
-            .setName('From date')
+            .setName('From')
             .addText(text => {
                 text.inputEl.type = 'date';
                 text.setValue(this.fromDate)
@@ -47,7 +47,7 @@ export class HledgerImportModal extends Modal {
             });
 
         new Setting(contentEl)
-            .setName('To date')
+            .setName('To')
             .addText(text => {
                 text.inputEl.type = 'date';
                 text.setValue(this.toDate);

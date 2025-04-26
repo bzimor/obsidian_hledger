@@ -163,6 +163,15 @@ export class HledgerEntryModal extends Modal {
                     currency: lastEntry.currency
                 });
                 this.renderAccountEntries(entriesContainer);
+                
+                // Focus on the newly added account input
+                setTimeout(() => {
+                    const newAccountInput = entriesContainer.querySelectorAll('.hledger-account-input');
+                    if (newAccountInput && newAccountInput.length > 0) {
+                        const lastAccountInput = newAccountInput[newAccountInput.length - 1] as HTMLInputElement;
+                        lastAccountInput.focus();
+                    }
+                }, 10);
             });
             addAccountButtonEl = addAccountButton;
         }
@@ -229,6 +238,15 @@ export class HledgerEntryModal extends Modal {
                             currency: lastEntry.currency
                         });
                         this.renderAccountEntries(entriesContainer);
+                        
+                        // Focus on the newly added account input
+                        setTimeout(() => {
+                            const newAccountInput = entriesContainer.querySelectorAll('.hledger-account-input');
+                            if (newAccountInput && newAccountInput.length > 0) {
+                                const lastAccountInput = newAccountInput[newAccountInput.length - 1] as HTMLInputElement;
+                                lastAccountInput.focus();
+                            }
+                        }, 10);
                     });
                     addAccountButtonEl = addAccountButton;
                 }
@@ -280,53 +298,205 @@ export class HledgerEntryModal extends Modal {
         this.entries.forEach((entry, index) => {
             const entryDiv = container.createDiv('hledger-entry-row');
             
-            const accountInput = entryDiv.createEl('input', {
+            const accountInputContainer = entryDiv.createDiv('hledger-account-input-container');
+            
+            const accountInput = accountInputContainer.createEl('input', {
                 type: 'text',
                 value: entry.account,
                 placeholder: 'Account',
                 cls: 'text-input hledger-account-input'
             });
 
-            const showSuggestModal = () => {
-                const suggestModal = new AccountSuggestModal(
-                    this.app,
-                    this.accounts,
-                    (item: string) => {
-                        entry.account = item;
-                        accountInput.value = item;
+            // Create a suggestion container that will be shown/hidden as needed
+            const suggestContainer = accountInputContainer.createDiv('hledger-account-suggest-container');
+            suggestContainer.style.display = 'none';
+            
+            // Function to show suggestions based on current input
+            const showSuggestions = () => {
+                const inputValue = accountInput.value.toLowerCase();
+                if (!inputValue) {
+                    suggestContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Filter accounts using fuzzy matching
+                const matches = this.accounts
+                    .filter(account => account.toLowerCase().includes(inputValue))
+                    .sort((a, b) => {
+                        // Prioritize matches at the start of the string
+                        const aStartsWithInput = a.toLowerCase().startsWith(inputValue) ? 0 : 1;
+                        const bStartsWithInput = b.toLowerCase().startsWith(inputValue) ? 0 : 1;
                         
-                        // Move focus to the amount input in the same row
+                        // If one starts with input and other doesn't, prioritize the one that starts with input
+                        if (aStartsWithInput !== bStartsWithInput) {
+                            return aStartsWithInput - bStartsWithInput;
+                        }
+                        
+                        // If both either start or don't start with input, prioritize by occurrence position
+                        const aIndex = a.toLowerCase().indexOf(inputValue);
+                        const bIndex = b.toLowerCase().indexOf(inputValue);
+                        if (aIndex !== bIndex) {
+                            return aIndex - bIndex;
+                        }
+                        
+                        // Otherwise sort by length (shorter first)
+                        return a.length - b.length;
+                    })
+                    .slice(0, 10); // Display up to 10 suggestions
+                
+                if (matches.length === 0) {
+                    suggestContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Display matches
+                suggestContainer.empty();
+                suggestContainer.style.display = 'block';
+                
+                matches.forEach((account, idx) => {
+                    const item = suggestContainer.createDiv({
+                        cls: idx === 0 ? 'hledger-account-suggest-item selected' : 'hledger-account-suggest-item'
+                    });
+                    item.textContent = account;
+                    
+                    // Handle click on suggestion - works for both mouse and touch
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); // Prevents blur on the input
+                        selectSuggestion(account);
+                    });
+                    
+                    // Add touch event for mobile
+                    item.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        selectSuggestion(account);
+                    });
+                    
+                    // Handle hover to highlight item (desktop only)
+                    item.addEventListener('mouseenter', () => {
+                        // Remove selected class from all items
+                        suggestContainer.querySelectorAll('.hledger-account-suggest-item').forEach(el => {
+                            el.removeClass('selected');
+                        });
+                        // Add selected class to this item
+                        item.addClass('selected');
+                    });
+                });
+            };
+            
+            // Function to handle suggestion selection
+            const selectSuggestion = (account: string) => {
+                entry.account = account;
+                accountInput.value = account;
+                suggestContainer.style.display = 'none';
+                
+                // Move focus to amount input
                         const amountInput = entryDiv.querySelector('.hledger-amount-input') as HTMLInputElement;
                         if (amountInput) {
                             amountInput.focus();
                         }
-                    }
-                );
-                suggestModal.open();
             };
-
-            accountInput.addEventListener('click', showSuggestModal);
+            
+            // Handle keyboard navigation in suggestions
+            accountInput.addEventListener('keydown', (e) => {
+                if (suggestContainer.style.display === 'none') {
+                    if (e.key === 'ArrowDown') {
+                        showSuggestions();
+                        e.preventDefault();
+                    }
+                    return;
+                }
+                
+                const items = suggestContainer.querySelectorAll('.hledger-account-suggest-item');
+                const selectedItem = suggestContainer.querySelector('.selected') as HTMLElement;
+                let selectedIndex = Array.from(items).indexOf(selectedItem);
+                
+                switch (e.key) {
+                    case 'ArrowDown':
+                        if (selectedIndex < items.length - 1) {
+                            items[selectedIndex].removeClass('selected');
+                            items[selectedIndex + 1].addClass('selected');
+                            
+                            // Ensure the newly selected item is scrolled into view
+                            const nextItem = items[selectedIndex + 1] as HTMLElement;
+                            const containerRect = suggestContainer.getBoundingClientRect();
+                            const itemRect = nextItem.getBoundingClientRect();
+                            
+                            // If item is below the visible area
+                            if (itemRect.bottom > containerRect.bottom) {
+                                suggestContainer.scrollTop += (itemRect.bottom - containerRect.bottom);
+                            }
+                        }
+                        e.preventDefault();
+                        break;
+                    case 'ArrowUp':
+                        if (selectedIndex > 0) {
+                            items[selectedIndex].removeClass('selected');
+                            items[selectedIndex - 1].addClass('selected');
+                            
+                            // Ensure the newly selected item is scrolled into view
+                            const prevItem = items[selectedIndex - 1] as HTMLElement;
+                            const containerRect = suggestContainer.getBoundingClientRect();
+                            const itemRect = prevItem.getBoundingClientRect();
+                            
+                            // If item is above the visible area
+                            if (itemRect.top < containerRect.top) {
+                                suggestContainer.scrollTop -= (containerRect.top - itemRect.top);
+                            }
+                        }
+                        e.preventDefault();
+                        break;
+                    case 'Enter':
+                        if (selectedItem) {
+                            selectSuggestion(selectedItem.textContent || '');
+                            e.preventDefault();
+                        }
+                        break;
+                    case 'Escape':
+                        suggestContainer.style.display = 'none';
+                        e.preventDefault();
+                        break;
+                }
+            });
+            
+            // Show suggestions as user types
+            accountInput.addEventListener('input', showSuggestions);
+            
+            // Add focus event to show suggestions when focusing on field (for mobile)
+            accountInput.addEventListener('focus', showSuggestions);
+            
+            // Hide suggestions when input loses focus, but with delay to allow click events
+            accountInput.addEventListener('blur', (e) => {
+                // Don't hide suggestions on mobile when the virtual keyboard is visible
+                // This setTimeout gives enough time for interactions to complete
+                setTimeout(() => {
+                    // Only hide if no element in the container has focus
+                    if (!suggestContainer.contains(document.activeElement)) {
+                        suggestContainer.style.display = 'none';
+                    }
+                }, 300);
+            });
+            
+            // Also add mousedown listener to prevent focus loss when clicking suggestions
+            suggestContainer.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevents blur on the input
+            });
+            
+            // Prevent touchstart from causing unwanted blur events
+            suggestContainer.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            });
+            
+            // Retain the original click handler for the input
+            accountInput.addEventListener('click', () => {
+                if (!accountInput.value) {
+                    showSuggestions();
+                }
+            });
+            
             accountInput.addEventListener('change', (e) => {
                 const target = e.target as HTMLInputElement;
                 entry.account = target.value;
             });
-            
-            // Add Tab key handler to trigger fuzzy suggest
-            if (index === 0) {
-                // For the first account input, add a Tab key handler to the description input
-                const descriptionInput = this.contentEl.querySelector('.hledger-description-input') as HTMLInputElement;
-                if (descriptionInput) {
-                    descriptionInput.addEventListener('keydown', (e) => {
-                        if (e.key === 'Tab' && !e.shiftKey) {
-                            // The Tab key will naturally move focus to the account input
-                            // We'll use a setTimeout to trigger the suggest modal after the focus has moved
-                            setTimeout(() => {
-                                showSuggestModal();
-                            }, 50);
-                        }
-                    });
-                }
-            }
 
             const amountInput = entryDiv.createEl('input', {
                 type: 'text',
