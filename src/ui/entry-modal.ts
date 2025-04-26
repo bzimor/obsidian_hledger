@@ -111,6 +111,9 @@ export class HledgerEntryModal extends Modal {
             const target = e.target as HTMLInputElement;
             this.description = target.value;
         });
+        
+        // Set focus on description input when modal opens
+        descriptionInput.focus();
 
         const entriesContainer = contentEl.createDiv('hledger-entries-container');
         this.renderAccountEntries(entriesContainer);
@@ -226,6 +229,14 @@ export class HledgerEntryModal extends Modal {
             }
             this.renderAccountEntries(entriesContainer);
         });
+        
+        // Add Ctrl+Enter keyboard shortcut to trigger submit button
+        contentEl.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                submitButton.click();
+            }
+        });
     }
 
     private async loadAccounts() {
@@ -277,6 +288,12 @@ export class HledgerEntryModal extends Modal {
                     (item: string) => {
                         entry.account = item;
                         accountInput.value = item;
+                        
+                        // Move focus to the amount input in the same row
+                        const amountInput = entryDiv.querySelector('.hledger-amount-input') as HTMLInputElement;
+                        if (amountInput) {
+                            amountInput.focus();
+                        }
                     }
                 );
                 suggestModal.open();
@@ -287,16 +304,46 @@ export class HledgerEntryModal extends Modal {
                 const target = e.target as HTMLInputElement;
                 entry.account = target.value;
             });
+            
+            // Add Tab key handler to trigger fuzzy suggest
+            if (index === 0) {
+                // For the first account input, add a Tab key handler to the description input
+                const descriptionInput = this.contentEl.querySelector('.hledger-description-input') as HTMLInputElement;
+                if (descriptionInput) {
+                    descriptionInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Tab' && !e.shiftKey) {
+                            // The Tab key will naturally move focus to the account input
+                            // We'll use a setTimeout to trigger the suggest modal after the focus has moved
+                            setTimeout(() => {
+                                showSuggestModal();
+                            }, 50);
+                        }
+                    });
+                }
+            }
 
             const amountInput = entryDiv.createEl('input', {
-                type: 'number',
-                value: entry.amount.toString(),
+                type: 'text',
+                value: '',
                 placeholder: 'Amount',
                 cls: 'text-input hledger-amount-input'
             });
             amountInput.addEventListener('change', (e) => {
                 const target = e.target as HTMLInputElement;
-                entry.amount = parseFloat(target.value) || 0;
+                let value = target.value.trim();
+                
+                // Handle 'k' and 'm' suffixes
+                if (value.toLowerCase().endsWith('k')) {
+                    value = value.slice(0, -1);
+                    entry.amount = (parseFloat(value) || 0) * 1000;
+                    target.value = entry.amount.toString();
+                } else if (value.toLowerCase().endsWith('m')) {
+                    value = value.slice(0, -1);
+                    entry.amount = (parseFloat(value) || 0) * 1000000;
+                    target.value = entry.amount.toString();
+                } else {
+                    entry.amount = parseFloat(value) || 0;
+                }
             });
 
             const currencySelect = entryDiv.createEl('select', {
@@ -374,4 +421,4 @@ export class HledgerEntryModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
     }
-} 
+}
