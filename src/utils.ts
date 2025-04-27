@@ -91,14 +91,15 @@ export function getDateFromFilename(filePath: string, format: string): moment.Mo
  * Extracts the hledger block content from a file
  */
 export function extractHledgerBlock(fileContent: string): string | null {
-    const hledgerCodeBlockRegex = /```hledger\s*([\s\S]*?)\s*```/;
-    const match = fileContent.match(hledgerCodeBlockRegex);
+    const hledgerCodeBlockRegex = /```hledger\s*([\s\S]*?)```/gi;
+    const blocks: string[] = [];
     
-    if (match && match[1]) {
-        return match[1].trim();
+    let match;
+    while ((match = hledgerCodeBlockRegex.exec(fileContent)) !== null) {
+        blocks.push(match[1].trim());
     }
     
-    return null;
+    return blocks.length > 0 ? blocks.join('\n\n') : null;
 }
 
 /**

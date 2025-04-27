@@ -142,7 +142,7 @@ export default class HledgerPlugin extends Plugin {
         try {
             const allFiles = await getAllFilesInFolder(this.settings.dailyNotesFolder!, adapter);
             const filteredFiles = filterFilesByDateRange(allFiles, fromDate, toDate, dailyNotesFormat);
-    
+            
             if (filteredFiles.length === 0) {
                 new Notice('No daily notes found in the specified date range.');
                 return;

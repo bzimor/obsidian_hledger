@@ -27,15 +27,15 @@ describe('Number formatting functions', () => {
         test('formats decimals correctly with comma-dot format', () => {
             expect(formatNumber(1000.5, 'comma-dot')).toBe('1,000.50');
             expect(formatNumber(1000.55, 'comma-dot')).toBe('1,000.55');
-            expect(formatNumber(1000.555, 'comma-dot')).toBe('1,000.555'); // Preserves all decimal places
-            expect(formatNumber(1000.554, 'comma-dot')).toBe('1,000.554'); // Preserves all decimal places
+            expect(formatNumber(1000.555, 'comma-dot')).toBe('1,000.555');
+            expect(formatNumber(1000.554, 'comma-dot')).toBe('1,000.554');
             expect(formatNumber(-10.99, 'comma-dot')).toBe('-10.99');
         });
 
         test('formats numbers correctly with space-comma format', () => {
             expect(formatNumber(1000, 'space-comma')).toBe('1 000,00');
             expect(formatNumber(1000.5, 'space-comma')).toBe('1 000,50');
-            expect(formatNumber(1000.555, 'space-comma')).toBe('1 000,555'); // Preserves all decimal places
+            expect(formatNumber(1000.555, 'space-comma')).toBe('1 000,555');
             expect(formatNumber(-1234.56, 'space-comma')).toBe('-1 234,56');
         });
 
@@ -47,10 +47,10 @@ describe('Number formatting functions', () => {
         });
 
         test('handles edge cases correctly', () => {
-            expect(formatNumber(0.005, 'comma-dot')).toBe('0.005'); // Preserves small number
-            expect(formatNumber(0.004, 'comma-dot')).toBe('0.004'); // Preserves small number
-            expect(formatNumber(0.999, 'comma-dot')).toBe('0.999'); // Preserves value
-            expect(formatNumber(Number.MIN_SAFE_INTEGER, 'comma-dot')).toContain('-9,007,199,254,740,991.00'); // Large negative number
+            expect(formatNumber(0.005, 'comma-dot')).toBe('0.005');
+            expect(formatNumber(0.004, 'comma-dot')).toBe('0.004');
+            expect(formatNumber(0.999, 'comma-dot')).toBe('0.999');
+            expect(formatNumber(Number.MIN_SAFE_INTEGER, 'comma-dot')).toContain('-9,007,199,254,740,991.00');
         });
     });
 

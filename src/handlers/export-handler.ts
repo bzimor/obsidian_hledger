@@ -6,7 +6,8 @@ import {
     getDateFromFilename, 
     normalizePath, 
     ensureDirectoryExists,
-    getParentDirectory
+    getParentDirectory,
+    extractTransactionDate
 } from '../utils';
 
 /**
@@ -38,13 +39,25 @@ export function splitIntoTransactions(blockContent: string): string[] {
 /**
  * Formats a transaction with the proper date and indentation
  */
-export function formatTransaction(transactionString: string, formattedDate: string): string {
+export function formatTransaction(transactionString: string, formattedDate: string, hledgerDateFormat: string = 'YYYY-MM-DD'): string {
     const lines = transactionString.split('\n');
     const firstLine = lines[0].trimEnd();
+    
+    const existingDate = extractTransactionDate(firstLine, hledgerDateFormat);
+    const hasDateAlready = existingDate !== null;
     
     if (/\s{3,}/.test(firstLine)) {
         const indentedLines = lines.map(line => `    ${line.trimEnd()}`);
         return `${formattedDate}\n${indentedLines.join('\n')}`;
+    } else if (hasDateAlready) {
+        const restOfLines = lines.slice(1);
+        
+        const normalizedIndentedLines = restOfLines.map(line => {
+            const trimmedLine = line.replace(/^\s+/, '');
+            return `    ${trimmedLine}`;
+        });
+        
+        return `${firstLine}${normalizedIndentedLines.length > 0 ? `\n${normalizedIndentedLines.join('\n')}` : ''}`;
     } else {
         const header = `${formattedDate} ${firstLine}`;
         const restOfLines = lines.slice(1);
@@ -65,28 +78,44 @@ export async function processHledgerFile(
     const processedTransactions: string[] = [];
     
     try {
-        const filenameWithExt = filePath.split('/').pop() || filePath;
-        const filenameWithoutExt = filenameWithExt.replace(/\.md$/, '');
+        let parsedDate;
         
-        const parsedDate = moment.default(filenameWithoutExt, dailyNotesDateFormat, true);
+        if (dailyNotesDateFormat.includes('/')) {
+            const pathParts = filePath.split('/');
+            
+            if (pathParts.length >= 2) {
+                const dirName = pathParts[pathParts.length - 2]; 
+                const fileName = pathParts[pathParts.length - 1].replace(/\.md$/i, '');
+                const fullDateStr = `${dirName}/${fileName}`;
+                
+                parsedDate = moment.default(fullDateStr, dailyNotesDateFormat, true);
+            }
+        } else {
+            const filenameWithExt = filePath.split('/').pop() || filePath;
+            const filenameWithoutExt = filenameWithExt.replace(/\.md$/, '');
+            
+            parsedDate = moment.default(filenameWithoutExt, dailyNotesDateFormat, true);
+        }
 
-        if (!parsedDate.isValid()) {
-            console.warn(`Skipping file: Could not parse date from filename '${filenameWithoutExt}' using format '${dailyNotesDateFormat}' for file: ${filePath}`);
+        if (!parsedDate || !parsedDate.isValid()) {
+            console.warn(`Skipping file: Could not parse date from file path '${filePath}' using format '${dailyNotesDateFormat}'`);
             return [];
         }
         
         const formattedDate = parsedDate.format(hledgerDateFormat);
         const fileContent = await adapter.read(filePath);
+        
         const hledgerBlock = extractHledgerBlock(fileContent);
         
         if (!hledgerBlock) {
+            console.warn(`No hledger blocks found in file: ${filePath}`);
             return [];
         }
 
         const transactions = splitIntoTransactions(hledgerBlock);
         
         for (const transaction of transactions) {
-            const formattedTransaction = formatTransaction(transaction, formattedDate);
+            const formattedTransaction = formatTransaction(transaction, formattedDate, hledgerDateFormat);
             processedTransactions.push(formattedTransaction);
         }
     } catch (error) {
@@ -172,34 +201,38 @@ export function filterFilesByDateRange(
             return false;
         }
 
+        if (dateFormat.includes('/')) {
+            const pathParts = normalizedFilePath.split('/');
+            if (pathParts.length >= 2) {
+                const dirName = pathParts[pathParts.length - 2];
+                const fileName = pathParts[pathParts.length - 1].replace(/\.md$/i, '');
+                
+                const formatParts = dateFormat.split('/');
+                const dirFormat = formatParts[0];
+                const fileFormat = formatParts[1];
+                
+                const dirDate = moment.default(dirName, dirFormat, true);
+                if (!dirDate.isValid()) {
+                    return false;
+                }
+                
+                const fullDateStr = `${dirName}/${fileName}`;
+                const fileDate = moment.default(fullDateStr, dateFormat, true);
+                
+                return fileDate.isValid() && fileDate.isBetween(fromMoment, toMoment, 'day', '[]');
+            }
+            return false;
+        }
+        
         const basename = normalizedFilePath.split('/').pop()?.replace(/\.md$/i, '');
 
         if (!basename) {
-             return false;
+            return false;
         }
 
         const fileDate = moment.default(basename, dateFormat, true);
         return fileDate.isValid() && fileDate.isBetween(fromMoment, toMoment, 'day', '[]');
     });
-}
-
-/**
- * Extracts hledger blocks from a file
- */
-export async function extractHledgerBlocks(filePath: string, adapter: DataAdapter): Promise<string> {
-    try {
-        const fileContent = await adapter.read(filePath);
-        const hledgerRegex = /```hledger\n([\s\S]*?)\n```/gi;
-        let match;
-        const blocks: string[] = [];
-        while ((match = hledgerRegex.exec(fileContent)) !== null) {
-            blocks.push(match[1].trim());
-        }
-        return blocks.join('\n\n');
-    } catch (error) {
-        console.warn(`Could not read or parse file ${filePath}:`, error);
-        return '';
-    }
 }
 
 /**
@@ -217,15 +250,39 @@ export async function writeJournalToFile(
             await ensureDirectoryExists(folder, adapter);
         }
         
-        let fileContent = content;
-        if (!replaceExisting && await adapter.exists(filePath)) {
-            const existingContent = await adapter.read(filePath);
-            fileContent = existingContent + '\n\n' + content;
-        }
+        const fileExists = await adapter.exists(filePath);
         
-        await adapter.write(filePath, fileContent);
+        if (fileExists && !replaceExisting) {
+            const newFilePath = await generateIncrementedFilePath(filePath, adapter);
+            await adapter.write(newFilePath, content);
+        } else {
+            await adapter.write(filePath, content);
+        }
     } catch (error) {
         console.error(`Error writing to journal file ${filePath}:`, error);
         throw new Error(`Failed to write to journal file: ${error instanceof Error ? error.message : String(error)}`);
     }
+}
+
+/**
+ * Generates an incremented file path when the original file already exists
+ * Example: if "file.txt" exists, returns "file_1.txt", then "file_2.txt", etc.
+ */
+async function generateIncrementedFilePath(
+    originalPath: string,
+    adapter: DataAdapter
+): Promise<string> {
+    const lastDotIndex = originalPath.lastIndexOf('.');
+    const basePath = lastDotIndex !== -1 ? originalPath.substring(0, lastDotIndex) : originalPath;
+    const extension = lastDotIndex !== -1 ? originalPath.substring(lastDotIndex) : '';
+    
+    let counter = 1;
+    let newPath = `${basePath}_${counter}${extension}`;
+    
+    while (await adapter.exists(newPath)) {
+        counter++;
+        newPath = `${basePath}_${counter}${extension}`;
+    }
+    
+    return newPath;
 } 
