@@ -1,4 +1,6 @@
 import { DataAdapter } from 'obsidian';
+import * as moment from 'moment';
+import { createDateRegexPattern, ensureDirectoryExists } from './utils';
 
 export type NumberFormat = 'comma-dot' | 'space-comma' | 'dot-comma';
 
@@ -9,6 +11,11 @@ export interface FormatConfig {
     lineLength: number;
 }
 
+// Amount formatting utilities
+
+/**
+ * Formats a number according to the specified format
+ */
 export function formatNumber(num: number, format: NumberFormat): string {
     const parts = num.toString().split('.');
     const integerPart = parts[0];
@@ -18,7 +25,6 @@ export function formatNumber(num: number, format: NumberFormat): string {
         decimalPart += '0';
     }
     
-    // Format the integer part with thousands separator
     let thousandsSeparator: string;
     let decimalMark: string;
     
@@ -41,6 +47,9 @@ export function formatNumber(num: number, format: NumberFormat): string {
     return `${formattedInteger}${decimalMark}${decimalPart}`;
 }
 
+/**
+ * Formats an amount with its currency according to the specified configuration
+ */
 export function formatAmount(amount: number, currency: string, config: FormatConfig): string {
     const formattedNumber = formatNumber(amount, config.numberFormat);
     const space = config.currencySpacing ? ' ' : '';
@@ -52,90 +61,42 @@ export function formatAmount(amount: number, currency: string, config: FormatCon
     }
 }
 
-export function formatLine(account: string, amount: number, currency: string, config: FormatConfig, exchangeAmount?: number, exchangeCurrency?: string): string {
+/**
+ * Formats a transaction line with proper spacing and alignment
+ */
+export function formatLine(
+    account: string, 
+    amount: number, 
+    currency: string, 
+    config: FormatConfig, 
+    exchangeAmount?: number, 
+    exchangeCurrency?: string
+): string {
     const formattedAmount = formatAmount(amount, currency, config);
     let line = `${account}`;
     
+    const paddingLength = config.lineLength - account.length - formattedAmount.length;
+    const padding = ' '.repeat(Math.max(0, paddingLength));
+    
     if (exchangeAmount !== undefined && exchangeCurrency !== undefined) {
-        // For exchange transactions, first format the line with normal padding
-        const paddingLength = config.lineLength - account.length - formattedAmount.length;
-        const padding = ' '.repeat(Math.max(0, paddingLength));
-        // Then add the exchange amount after the line length
         const formattedExchange = formatAmount(Math.abs(exchangeAmount), exchangeCurrency, config);
         line += `${padding}${formattedAmount} @@ ${formattedExchange}`;
     } else {
-        // For regular transactions
-        const paddingLength = config.lineLength - account.length - formattedAmount.length;
-        const padding = ' '.repeat(Math.max(0, paddingLength));
         line += `${padding}${formattedAmount}`;
     }
     
     return line;
 }
 
-export function parseJournalTransactions(content: string, hledgerDateFormat: string): string[] {
-    const transactions: string[] = [];
-    let currentTransactionLines: string[] = []; // Store lines for the current transaction
+// Daily note utilities
 
-    // Generate regex once
-    let pattern = hledgerDateFormat;
-    // 1. Replace Moment.js tokens with digit patterns
-    pattern = pattern
-        .replace(/YYYY/g, '\\d{4}')
-        .replace(/YY/g, '\\d{2}')
-        .replace(/MM/g, '\\d{2}')
-        .replace(/M/g, '\\d{1,2}') // Month number 1-12
-        .replace(/DD/g, '\\d{2}')
-        .replace(/D/g, '\\d{1,2}'); // Day number 1-31
-    // 2. Escape common separators
-    pattern = pattern
-        .replace(/\//g, '\\/') // Escape / -> \/
-        .replace(/\./g, '\\.') // Escape . -> \.
-        .replace(/-/g, '\\-'); // Escape - -> \-
-        
-    const dateRegex = new RegExp(`^${pattern}`);
-
-    const lines = content.split('\n');
-
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-
-        if (dateRegex.test(line)) { // Use original line for regex test
-            // Found the start of a new transaction
-            // If we have lines from a previous transaction, join and add them
-            if (currentTransactionLines.length > 0) {
-                transactions.push(currentTransactionLines.join('\n'));
-            }
-            // Start the new transaction
-            currentTransactionLines = [line]; // Add the date line itself
-        } else if (currentTransactionLines.length > 0) {
-            // We are inside a transaction (date line already found)
-            // Append ONLY indented lines (postings or indented comments)
-            if (line.startsWith(' ') || line.startsWith('\t')) {
-                 currentTransactionLines.push(line);
-            }
-            // Ignore non-indented lines (comments, blank lines, other text)
-        }
-        // If currentTransactionLines is empty and line is not a date, ignore (comments/blanks before first txn)
-    }
-
-    // Add the last transaction if it exists
-    if (currentTransactionLines.length > 0) {
-        transactions.push(currentTransactionLines.join('\n'));
-    }
-
-    return transactions;
-}
-
-interface DailyNotePathInfo {
+export interface DailyNotePathInfo {
     targetFolder: string;
     targetPath: string;
 }
 
-
 /**
- * Calculates the target folder and file path for a daily note based on date and format settings.
- * Handles date formats that include '/' to specify subdirectories.
+ * Calculates the target folder and file path for a daily note
  */
 export function calculateDailyNotePathInfo(
     dateObj: moment.Moment,
@@ -145,82 +106,41 @@ export function calculateDailyNotePathInfo(
     let fileName: string;
     let subFolder = '';
 
-    // Check if date format contains folder structure
     if (dateFormat.includes('/')) {
-        // Split format into folder part and file part
         const parts = dateFormat.split('/');
-        const fileFormat = parts.pop() || ''; // Last part is the file format
-        const folderFormat = parts.join('/'); // Remaining parts form the folder format
+        const fileFormat = parts.pop() || '';
+        const folderFormat = parts.join('/');
         
         if (folderFormat) {
              subFolder = dateObj.format(folderFormat);
         }
         fileName = dateObj.format(fileFormat) + '.md';
     } else {
-        // Simple date format for the filename
         fileName = dateObj.format(dateFormat) + '.md';
     }
 
-    // Construct the full target folder path
     const targetFolder = subFolder 
         ? `${baseFolder}/${subFolder}` 
         : baseFolder;
     
-    // Clean up potential double slashes, just in case
     const cleanedTargetFolder = targetFolder.replace(/\/\//g, '/');
     const targetPath = `${cleanedTargetFolder}/${fileName}`.replace(/\/\//g, '/');
 
     return { targetFolder: cleanedTargetFolder, targetPath };
 }
 
-
 /**
- * Ensures that a directory exists, creating it if necessary.
- * Handles potential race conditions where the directory might be created between checks.
- * Throws an error if the directory cannot be created.
- */
-export async function ensureDirectoryExists(directoryPath: string, adapter: DataAdapter): Promise<void> {
-    if (!directoryPath) return; // No directory to create
-
-    try {
-        if (!(await adapter.exists(directoryPath))) {
-            try {
-                await adapter.mkdir(directoryPath);
-            } catch (mkdirError) {
-                // Check again in case of race condition
-                if (!(await adapter.exists(directoryPath))) {
-                    console.error(`Failed to create directory after checking again: ${directoryPath}`, mkdirError);
-                    throw new Error(`Failed to create directory ${directoryPath}`);
-                } else {
-                }
-            }
-        }
-    } catch (error) {
-        // Catch errors from adapter.exists or the final throw
-        console.error(`Error ensuring directory exists ${directoryPath}:`, error);
-        // Re-throw a consistent error message if it's not already the specific creation failure
-        if (error instanceof Error && error.message.startsWith('Failed to create directory')) {
-            throw error;
-        } else {
-            throw new Error(`Failed to ensure directory exists ${directoryPath}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
-}
-
-/**
- * Updates an existing daily note file with a new hledger transaction within a ```hledger``` block,
- * or creates the file with a header and the block if it doesn't exist.
- * Throws errors if file operations fail.
+ * Updates or creates a daily note with a hledger transaction
  */
 export async function updateOrCreateDailyNoteHledgerSection(
     targetPath: string,
-    transactionContent: string, // Assumes content includes its own trailing newline if needed initially
+    transactionContent: string,
     transactionHeader: string,
     adapter: DataAdapter
 ): Promise<void> {
     try {
         const fileExists = await adapter.exists(targetPath);
-        let finalContent = '';
+        let finalContent: string;
 
         if (fileExists) {
             const file = await adapter.read(targetPath);
@@ -228,28 +148,23 @@ export async function updateOrCreateDailyNoteHledgerSection(
             const match = file.match(hledgerRegex);
 
             if (match) {
-                // Check if the existing content ends with a newline
                 const existingTransactions = match[1];
                 const needsNewline = existingTransactions.length > 0 && 
                                    !existingTransactions.endsWith('\n\n') &&
                                    !existingTransactions.trim().endsWith('\n');
                 
-                // Append new entry to existing hledger section
                 const newContent = needsNewline ? '\n' + transactionContent : transactionContent;
                 finalContent = file.replace(hledgerRegex, `\`\`\`hledger\n${match[1]}${newContent}\`\`\``);
             } else {
-                // Append a new block if none found
-                finalContent = file.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``; // Add header too when adding block first time
+                finalContent = file.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
             }
         } else {
-            // Create new file with header and block
             finalContent = `${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
         }
+        
         await adapter.write(targetPath, finalContent);
-
     } catch (error) {
         console.error(`Error updating or creating daily note section in ${targetPath}:`, error);
-        // Re-throw the error so the caller can handle it (e.g., show a Notice)
         throw new Error(`Failed to update or create hledger section in ${targetPath}: ${error instanceof Error ? error.message : String(error)}`);
     }
 }

@@ -2,6 +2,14 @@ import { App, Modal, TFile, FuzzySuggestModal, Notice } from 'obsidian';
 import { HledgerSettings } from '../settings';
 import moment from 'moment';
 
+// Type definitions
+interface Entry {
+    account: string;
+    amount: number;
+    currency: string;
+}
+
+type EntryModalCallback = (date: string, description: string, entries: Entry[]) => void;
 
 class AccountSuggestModal extends FuzzySuggestModal<string> {
     private accounts: string[];
@@ -29,8 +37,8 @@ class AccountSuggestModal extends FuzzySuggestModal<string> {
 export class HledgerEntryModal extends Modal {
     date: string;
     description: string;
-    entries: { account: string; amount: number; currency: string }[];
-    onSubmit: (date: string, description: string, entries: { account: string; amount: number; currency: string }[]) => void;
+    entries: Entry[];
+    onSubmit: EntryModalCallback;
     settings: HledgerSettings;
     accounts: string[] = [];
     isExchange: boolean;
@@ -39,18 +47,34 @@ export class HledgerEntryModal extends Modal {
     constructor(
         app: App,
         settings: HledgerSettings,
-        onSubmit: (date: string, description: string, entries: { account: string; amount: number; currency: string }[]) => void
+        onSubmit: EntryModalCallback
     ) {
         super(app);
         this.settings = settings;
         this.onSubmit = onSubmit;
         
+        this.initializeDefaultValues();
+    }
+
+    private initializeDefaultValues(): void {
+        this.setInitialDate();
+        
+        this.description = '';
+        this.entries = [
+            { account: '', amount: 0, currency: this.settings.currencies[0] },
+            { account: '', amount: 0, currency: this.settings.currencies[0] }
+        ];
+        this.isExchange = false;
+        this.exchangeAmount = null;
+    }
+
+    private setInitialDate(): void {
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile) {
             const basename = activeFile.basename.replace('.md', '');
-            const dateFormat = settings.dailyNotesDateFormat.includes('/') 
-                ? settings.dailyNotesDateFormat.split('/').pop() || settings.dailyNotesDateFormat
-                : settings.dailyNotesDateFormat;
+            const dateFormat = this.settings.dailyNotesDateFormat.includes('/') 
+                ? this.settings.dailyNotesDateFormat.split('/').pop() || this.settings.dailyNotesDateFormat
+                : this.settings.dailyNotesDateFormat;
             const fileNameDate = moment(basename, dateFormat, true);
             if (fileNameDate.isValid()) {
                 this.date = fileNameDate.format('YYYY-MM-DD');
@@ -60,14 +84,6 @@ export class HledgerEntryModal extends Modal {
         } else {
             this.date = moment().format('YYYY-MM-DD');
         }
-        
-        this.description = '';
-        this.entries = [
-            { account: '', amount: 0, currency: settings.currencies[0] },
-            { account: '', amount: 0, currency: settings.currencies[0] }
-        ];
-        this.isExchange = false;
-        this.exchangeAmount = null;
     }
 
     async onOpen() {
@@ -77,6 +93,17 @@ export class HledgerEntryModal extends Modal {
 
         await this.loadAccounts();
 
+        this.createModalHeader(contentEl);
+        this.createDescriptionInput(contentEl);
+        
+        const entriesContainer = contentEl.createDiv('hledger-entries-container');
+        this.renderAccountEntries(entriesContainer);
+
+        this.createModalButtons(contentEl, entriesContainer);
+        this.setupKeyboardShortcuts(contentEl);
+    }
+
+    private createModalHeader(contentEl: HTMLElement): void {
         const dateRow = contentEl.createDiv({ cls: 'hledger-date-row' });
 
         const typeToggle = dateRow.createEl('select', {
@@ -104,6 +131,13 @@ export class HledgerEntryModal extends Modal {
             this.date = target.value;
         });
 
+        typeToggle.addEventListener('change', (e) => {
+            const target = e.target as HTMLSelectElement;
+            this.handleTypeToggle(target.value === 'exchange', contentEl);
+        });
+    }
+
+    private createDescriptionInput(contentEl: HTMLElement): void {
         const descriptionInput = contentEl.createEl('input', {
             type: 'text',
             placeholder: 'Description',
@@ -115,16 +149,92 @@ export class HledgerEntryModal extends Modal {
             this.description = target.value;
         });
         
-        // Set focus on description input when modal opens
         descriptionInput.focus();
+    }
 
-        const entriesContainer = contentEl.createDiv('hledger-entries-container');
-        this.renderAccountEntries(entriesContainer);
-
-        const buttonsContainer = contentEl.createDiv('hledger-buttons-container');
+    private handleTypeToggle(isExchange: boolean, contentEl: HTMLElement): void {
+        this.isExchange = isExchange;
         
+        const entriesContainer = contentEl.querySelector('.hledger-entries-container') as HTMLElement;
+        const leftButtons = contentEl.querySelector('.hledger-left-buttons') as HTMLElement;
+        
+        if (this.isExchange) {
+            this.entries = [
+                { account: '', amount: 0, currency: this.settings.currencies[0] },
+                { account: '', amount: 0, currency: this.settings.currencies[1] }
+            ];
+            
+            const addButton = leftButtons.querySelector('.hledger-add-account-button');
+            if (addButton) {
+                addButton.remove();
+            }
+        } else {
+            this.entries = [
+                { account: '', amount: 0, currency: this.settings.currencies[0] },
+                { account: '', amount: 0, currency: this.settings.currencies[0] }
+            ];
+            
+            if (!leftButtons.querySelector('.hledger-add-account-button')) {
+                this.createAddButton(leftButtons, entriesContainer);
+            }
+        }
+        
+        this.renderAccountEntries(entriesContainer);
+    }
+
+    private createModalButtons(contentEl: HTMLElement, entriesContainer: HTMLElement): void {
+        const buttonsContainer = contentEl.createDiv('hledger-buttons-container');
         const leftButtons = buttonsContainer.createDiv('hledger-left-buttons');
         
+        if (!this.isExchange) {
+            this.createAddButton(leftButtons, entriesContainer);
+        }
+
+        const submitButton = buttonsContainer.createEl('button', {
+            cls: 'mod-cta',
+            text: 'Submit'
+        });
+        submitButton.addEventListener('click', () => this.handleSubmit());
+    }
+
+    private createAddButton(container: HTMLElement, entriesContainer: HTMLElement): HTMLElement {
+        const addAccountButton = container.createEl('button', {
+            cls: 'hledger-add-account-button'
+        });
+        
+        const svgEl = this.createSVGIcon('plus', 'M5 12h14', 'M12 5v14');
+        addAccountButton.empty();
+        addAccountButton.appendChild(svgEl);
+        
+        addAccountButton.addEventListener('click', () => {
+            this.addNewEntry(entriesContainer);
+        });
+        
+        return addAccountButton;
+    }
+
+    private addNewEntry(entriesContainer: HTMLElement): void {
+        const lastEntry = this.entries[this.entries.length - 1];
+        const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
+        
+        this.entries.push({
+            account: '',
+            amount: -totalAmount,
+            currency: lastEntry.currency
+        });
+        
+        this.renderAccountEntries(entriesContainer);
+        
+        setTimeout(() => {
+            const newAccountInput = entriesContainer.querySelectorAll('.hledger-account-input');
+            if (newAccountInput && newAccountInput.length > 0) {
+                const lastAccountInput = newAccountInput[newAccountInput.length - 1] as HTMLInputElement;
+                lastAccountInput.focus();
+            }
+        }, 10);
+    }
+
+    private createSVGIcon(iconName: string, ...pathData: string[]): SVGSVGElement {
         const SVG_NS = "http://www.w3.org/2000/svg";
 
         const svgEl = document.createElementNS(SVG_NS, "svg");
@@ -137,130 +247,77 @@ export class HledgerEntryModal extends Modal {
         svgEl.setAttribute("stroke-width", "2");
         svgEl.setAttribute("stroke-linecap", "round");
         svgEl.setAttribute("stroke-linejoin", "round");
-        svgEl.setAttribute("class", "svg-icon lucide-plus");
+        svgEl.setAttribute("class", `svg-icon lucide-${iconName}`);
 
-        const path1 = document.createElementNS(SVG_NS, "path");
-        path1.setAttribute("d", "M5 12h14");
-        svgEl.appendChild(path1);
+        pathData.forEach(d => {
+            const path = document.createElementNS(SVG_NS, "path");
+            path.setAttribute("d", d);
+            svgEl.appendChild(path);
+        });
 
-        const path2 = document.createElementNS(SVG_NS, "path");
-        path2.setAttribute("d", "M12 5v14");
-        svgEl.appendChild(path2);
-        let addAccountButtonEl: HTMLElement | null = null;
+        return svgEl;
+    }
+
+    private createTrashIcon(): SVGSVGElement {
+        const svg = this.createSVGIcon(
+            'trash-2',
+            'M3 6h18', 
+            'M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6',
+            'M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'
+        );
         
-        if (!this.isExchange) {        
-            const addAccountButton = leftButtons.createEl('button', {
-                cls: 'hledger-add-account-button'
-            });
-            addAccountButton.empty();
-            addAccountButton.appendChild(svgEl);
-            addAccountButton.addEventListener('click', () => {
-                const lastEntry = this.entries[this.entries.length - 1];
-                const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
-                this.entries.push({
-                    account: '',
-                    amount: -totalAmount,
-                    currency: lastEntry.currency
-                });
-                this.renderAccountEntries(entriesContainer);
-                
-                // Focus on the newly added account input
-                setTimeout(() => {
-                    const newAccountInput = entriesContainer.querySelectorAll('.hledger-account-input');
-                    if (newAccountInput && newAccountInput.length > 0) {
-                        const lastAccountInput = newAccountInput[newAccountInput.length - 1] as HTMLInputElement;
-                        lastAccountInput.focus();
-                    }
-                }, 10);
-            });
-            addAccountButtonEl = addAccountButton;
-        }
-
-        const submitButton = buttonsContainer.createEl('button', {
-            cls: 'mod-cta',
-            text: 'Submit'
-        });
-        submitButton.addEventListener('click', () => {
-            const emptyAccounts = this.entries.filter(entry => !entry.account.trim());
-            if (emptyAccounts.length > 0) {
-                new Notice('Please fill in all account names');
-                return;
-            }
-
-            const zeroAmounts = this.entries.filter(entry => entry.amount === 0);
-            if (zeroAmounts.length > 0) {
-                new Notice('Amounts cannot be zero');
-                return;
-            }
-
-            if (!this.isExchange) {
-                const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
-                const epsilon = 0.0001; // Small tolerance for floating point comparison
-                if (Math.abs(totalAmount) > epsilon) {
-                    new Notice(`Transaction does not balance. Total is ${totalAmount.toFixed(2)}`);
-                    return;
-                }
-            }
-
-            this.onSubmit(this.date, this.description, this.entries);
-            this.close();
-        });
-
-        typeToggle.addEventListener('change', (e) => {
-            const target = e.target as HTMLSelectElement;
-            this.isExchange = target.value === 'exchange';
-            if (this.isExchange) {
-                this.entries = [
-                    { account: '', amount: 0, currency: this.settings.currencies[0] },
-                    { account: '', amount: 0, currency: this.settings.currencies[1] }
-                ];
-                if (addAccountButtonEl) {
-                    addAccountButtonEl.remove();
-                    addAccountButtonEl = null;
-                }
-            } else {
-                this.entries = [
-                    { account: '', amount: 0, currency: this.settings.currencies[0] },
-                    { account: '', amount: 0, currency: this.settings.currencies[0] }
-                ];
-                if (!addAccountButtonEl) {
-                    const addAccountButton = leftButtons.createEl('button', {
-                        cls: 'hledger-add-account-button'
-                    });
-                    addAccountButton.empty();
-                    addAccountButton.appendChild(svgEl);
-                    addAccountButton.addEventListener('click', () => {
-                        const lastEntry = this.entries[this.entries.length - 1];
-                        const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
-                        this.entries.push({
-                            account: '',
-                            amount: -totalAmount,
-                            currency: lastEntry.currency
-                        });
-                        this.renderAccountEntries(entriesContainer);
-                        
-                        // Focus on the newly added account input
-                        setTimeout(() => {
-                            const newAccountInput = entriesContainer.querySelectorAll('.hledger-account-input');
-                            if (newAccountInput && newAccountInput.length > 0) {
-                                const lastAccountInput = newAccountInput[newAccountInput.length - 1] as HTMLInputElement;
-                                lastAccountInput.focus();
-                            }
-                        }, 10);
-                    });
-                    addAccountButtonEl = addAccountButton;
-                }
-            }
-            this.renderAccountEntries(entriesContainer);
-        });
+        const SVG_NS = "http://www.w3.org/2000/svg";
         
-        // Add Ctrl+Enter keyboard shortcut to trigger submit button
+        const line1 = document.createElementNS(SVG_NS, "line");
+        line1.setAttribute("x1", "10");
+        line1.setAttribute("y1", "11");
+        line1.setAttribute("x2", "10");
+        line1.setAttribute("y2", "17");
+        svg.appendChild(line1);
+
+        const line2 = document.createElementNS(SVG_NS, "line");
+        line2.setAttribute("x1", "14");
+        line2.setAttribute("y1", "11");
+        line2.setAttribute("x2", "14");
+        line2.setAttribute("y2", "17");
+        svg.appendChild(line2);
+        
+        return svg;
+    }
+
+    private setupKeyboardShortcuts(contentEl: HTMLElement): void {
         contentEl.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
-                submitButton.click();
+                this.handleSubmit();
             }
         });
+    }
+
+    private handleSubmit(): void {
+        const emptyAccounts = this.entries.filter(entry => !entry.account.trim());
+        if (emptyAccounts.length > 0) {
+            new Notice('Please fill in all account names');
+            return;
+        }
+
+        const zeroAmounts = this.entries.filter(entry => entry.amount === 0);
+        if (zeroAmounts.length > 0) {
+            new Notice('Amounts cannot be zero');
+            return;
+        }
+
+        if (!this.isExchange) {
+            const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
+            const epsilon = 0.0001; // Small tolerance for floating point comparison
+            if (Math.abs(totalAmount) > epsilon) {
+                new Notice(`Transaction does not balance. Total is ${totalAmount.toFixed(2)}`);
+                return;
+            }
+        }
+
+        this.onSubmit(this.date, this.description, this.entries);
+        this.close();
     }
 
     private async loadAccounts() {
@@ -298,328 +355,336 @@ export class HledgerEntryModal extends Modal {
         this.entries.forEach((entry, index) => {
             const entryDiv = container.createDiv('hledger-entry-row');
             
-            const accountInputContainer = entryDiv.createDiv('hledger-account-input-container');
-            
-            const accountInput = accountInputContainer.createEl('input', {
-                type: 'text',
-                value: entry.account,
-                placeholder: 'Account',
-                cls: 'text-input hledger-account-input'
-            });
-
-            // Create a suggestion container that will be shown/hidden as needed
-            const suggestContainer = accountInputContainer.createDiv('hledger-account-suggest-container');
-            suggestContainer.style.display = 'none';
-            
-            // Function to show suggestions based on current input
-            const showSuggestions = () => {
-                const inputValue = accountInput.value.toLowerCase();
-                if (!inputValue) {
-                    suggestContainer.style.display = 'none';
-                    return;
-                }
-                
-                // Filter accounts using fuzzy matching
-                const matches = this.accounts
-                    .filter(account => account.toLowerCase().includes(inputValue))
-                    .sort((a, b) => {
-                        // Prioritize matches at the start of the string
-                        const aStartsWithInput = a.toLowerCase().startsWith(inputValue) ? 0 : 1;
-                        const bStartsWithInput = b.toLowerCase().startsWith(inputValue) ? 0 : 1;
-                        
-                        // If one starts with input and other doesn't, prioritize the one that starts with input
-                        if (aStartsWithInput !== bStartsWithInput) {
-                            return aStartsWithInput - bStartsWithInput;
-                        }
-                        
-                        // If both either start or don't start with input, prioritize by occurrence position
-                        const aIndex = a.toLowerCase().indexOf(inputValue);
-                        const bIndex = b.toLowerCase().indexOf(inputValue);
-                        if (aIndex !== bIndex) {
-                            return aIndex - bIndex;
-                        }
-                        
-                        // Otherwise sort by length (shorter first)
-                        return a.length - b.length;
-                    })
-                    .slice(0, 10); // Display up to 10 suggestions
-                
-                if (matches.length === 0) {
-                    suggestContainer.style.display = 'none';
-                    return;
-                }
-                
-                // Display matches
-                suggestContainer.empty();
-                suggestContainer.style.display = 'block';
-                
-                matches.forEach((account, idx) => {
-                    const item = suggestContainer.createDiv({
-                        cls: idx === 0 ? 'hledger-account-suggest-item selected' : 'hledger-account-suggest-item'
-                    });
-                    item.textContent = account;
-                    
-                    // Handle click on suggestion - works for both mouse and touch
-                    item.addEventListener('mousedown', (e) => {
-                        e.preventDefault(); // Prevents blur on the input
-                        selectSuggestion(account);
-                    });
-                    
-                    // Add touch event for mobile
-                    item.addEventListener('touchend', (e) => {
-                        e.preventDefault();
-                        selectSuggestion(account);
-                    });
-                    
-                    // Handle hover to highlight item (desktop only)
-                    item.addEventListener('mouseenter', () => {
-                        // Remove selected class from all items
-                        suggestContainer.querySelectorAll('.hledger-account-suggest-item').forEach(el => {
-                            el.removeClass('selected');
-                        });
-                        // Add selected class to this item
-                        item.addClass('selected');
-                    });
-                });
-            };
-            
-            // Function to handle suggestion selection
-            const selectSuggestion = (account: string) => {
-                entry.account = account;
-                accountInput.value = account;
-                suggestContainer.style.display = 'none';
-                
-                // Move focus to amount input
-                        const amountInput = entryDiv.querySelector('.hledger-amount-input') as HTMLInputElement;
-                        if (amountInput) {
-                            amountInput.focus();
-                        }
-            };
-            
-            // Handle keyboard navigation in suggestions
-            accountInput.addEventListener('keydown', (e) => {
-                if (suggestContainer.style.display === 'none') {
-                    if (e.key === 'ArrowDown') {
-                        showSuggestions();
-                        e.preventDefault();
-                    }
-                    return;
-                }
-                
-                const items = suggestContainer.querySelectorAll('.hledger-account-suggest-item');
-                const selectedItem = suggestContainer.querySelector('.selected') as HTMLElement;
-                let selectedIndex = Array.from(items).indexOf(selectedItem);
-                
-                switch (e.key) {
-                    case 'ArrowDown':
-                        if (selectedIndex < items.length - 1) {
-                            items[selectedIndex].removeClass('selected');
-                            items[selectedIndex + 1].addClass('selected');
-                            
-                            // Ensure the newly selected item is scrolled into view
-                            const nextItem = items[selectedIndex + 1] as HTMLElement;
-                            const containerRect = suggestContainer.getBoundingClientRect();
-                            const itemRect = nextItem.getBoundingClientRect();
-                            
-                            // If item is below the visible area
-                            if (itemRect.bottom > containerRect.bottom) {
-                                suggestContainer.scrollTop += (itemRect.bottom - containerRect.bottom);
-                            }
-                        }
-                        e.preventDefault();
-                        break;
-                    case 'ArrowUp':
-                        if (selectedIndex > 0) {
-                            items[selectedIndex].removeClass('selected');
-                            items[selectedIndex - 1].addClass('selected');
-                            
-                            // Ensure the newly selected item is scrolled into view
-                            const prevItem = items[selectedIndex - 1] as HTMLElement;
-                            const containerRect = suggestContainer.getBoundingClientRect();
-                            const itemRect = prevItem.getBoundingClientRect();
-                            
-                            // If item is above the visible area
-                            if (itemRect.top < containerRect.top) {
-                                suggestContainer.scrollTop -= (containerRect.top - itemRect.top);
-                            }
-                        }
-                        e.preventDefault();
-                        break;
-                    case 'Enter':
-                        if (selectedItem) {
-                            selectSuggestion(selectedItem.textContent || '');
-                            e.preventDefault();
-                        }
-                        break;
-                    case 'Escape':
-                        suggestContainer.style.display = 'none';
-                        e.preventDefault();
-                        break;
-                }
-            });
-            
-            // Show suggestions as user types
-            accountInput.addEventListener('input', showSuggestions);
-            
-            // Add focus event to show suggestions when focusing on field (for mobile)
-            accountInput.addEventListener('focus', showSuggestions);
-            
-            // Hide suggestions when input loses focus, but with delay to allow click events
-            accountInput.addEventListener('blur', (e) => {
-                // Don't hide suggestions on mobile when the virtual keyboard is visible
-                // This setTimeout gives enough time for interactions to complete
-                setTimeout(() => {
-                    // Only hide if no element in the container has focus
-                    if (!suggestContainer.contains(document.activeElement)) {
-                        suggestContainer.style.display = 'none';
-                    }
-                }, 300);
-            });
-            
-            // Also add mousedown listener to prevent focus loss when clicking suggestions
-            suggestContainer.addEventListener('mousedown', (e) => {
-                e.preventDefault(); // Prevents blur on the input
-            });
-            
-            // Prevent touchstart from causing unwanted blur events
-            suggestContainer.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-            });
-            
-            // Retain the original click handler for the input
-            accountInput.addEventListener('click', () => {
-                if (!accountInput.value) {
-                    showSuggestions();
-                }
-            });
-            
-            accountInput.addEventListener('change', (e) => {
-                const target = e.target as HTMLInputElement;
-                entry.account = target.value;
-            });
-
-            const amountInput = entryDiv.createEl('input', {
-                type: 'text',
-                value: entry.amount ? entry.amount.toString(): '',
-                placeholder: 'Amount',
-                cls: 'text-input hledger-amount-input'
-            });
-            amountInput.addEventListener('change', (e) => {
-                const target = e.target as HTMLInputElement;
-                let value = target.value.trim();
-                
-                // Remove all non-numeric characters except for decimal point, 'k', and 'm'
-                // First preserve the suffix if it exists
-                let suffix = '';
-                if (value.toLowerCase().endsWith('k')) {
-                    suffix = 'k';
-                    value = value.slice(0, -1);
-                } else if (value.toLowerCase().endsWith('m')) {
-                    suffix = 'm';
-                    value = value.slice(0, -1);
-                }
-                
-                // Remove unwanted characters, keep only digits and decimal point
-                value = value.replace(/[^\d.-]/g, '');
-                
-                // Add the suffix back
-                value = value + suffix;
-                
-                // Handle 'k' and 'm' suffixes for conversion
-                if (value.toLowerCase().endsWith('k')) {
-                    value = value.slice(0, -1);
-                    entry.amount = (parseFloat(value) || 0) * 1000;
-                    target.value = entry.amount.toString();
-                } else if (value.toLowerCase().endsWith('m')) {
-                    value = value.slice(0, -1);
-                    entry.amount = (parseFloat(value) || 0) * 1000000;
-                    target.value = entry.amount.toString();
-                } else {
-                    entry.amount = parseFloat(value) || 0;
-                    target.value = entry.amount.toString();
-                }
-                
-                // Auto-set opposite amount in second row if there are exactly 2 rows and the second row's amount is empty
-                if (index === 0 && this.entries.length === 2) {
-                    const secondRow = this.entries[1];
-                    const secondAmountInput = container.querySelectorAll('.hledger-amount-input')[1] as HTMLInputElement;
-                    
-                    if (!secondRow.amount && secondAmountInput && (secondAmountInput.value === '' || secondAmountInput.value === '0')) {
-                        // Set opposite amount in second row
-                        secondRow.amount = -entry.amount;
-                        secondAmountInput.value = secondRow.amount.toString();
-                    }
-                }
-            });
-
-            const currencySelect = entryDiv.createEl('select', {
-                cls: 'dropdown hledger-currency-select'
-            });
-            this.settings.currencies.forEach(currency => {
-                const option = currencySelect.createEl('option', {
-                    text: currency,
-                    value: currency
-                });
-                if (currency === entry.currency) {
-                    option.selected = true;
-                }
-            });
-            currencySelect.addEventListener('change', (e) => {
-                const target = e.target as HTMLSelectElement;
-                entry.currency = target.value;
-            });
+            this.createAccountInput(entryDiv, entry, index, container);
+            this.createAmountInput(entryDiv, entry, index, container);
+            this.createCurrencySelect(entryDiv, entry);
 
             if (this.entries.length > 2 && !this.isExchange) {
-                const deleteButton = entryDiv.createEl('button', {
-                    cls: 'clickable-icon hledger-delete-button'
-                });
-                const SVG_NS = "http://www.w3.org/2000/svg";
-
-                const svgEl2 = document.createElementNS(SVG_NS, "svg");
-                svgEl2.setAttribute("xmlns", SVG_NS);
-                svgEl2.setAttribute("width", "24");
-                svgEl2.setAttribute("height", "24");
-                svgEl2.setAttribute("viewBox", "0 0 24 24");
-                svgEl2.setAttribute("fill", "none");
-                svgEl2.setAttribute("stroke", "currentColor");
-                svgEl2.setAttribute("stroke-width", "2");
-                svgEl2.setAttribute("stroke-linecap", "round");
-                svgEl2.setAttribute("stroke-linejoin", "round");
-                svgEl2.setAttribute("class", "svg-icon lucide-trash-2");
-
-                const path1 = document.createElementNS(SVG_NS, "path");
-                path1.setAttribute("d", "M3 6h18");
-                svgEl2.appendChild(path1);
-
-                const path2 = document.createElementNS(SVG_NS, "path");
-                path2.setAttribute("d", "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6");
-                svgEl2.appendChild(path2);
-
-                const path3 = document.createElementNS(SVG_NS, "path");
-                path3.setAttribute("d", "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2");
-                svgEl2.appendChild(path3);
-
-                const line1 = document.createElementNS(SVG_NS, "line");
-                line1.setAttribute("x1", "10");
-                line1.setAttribute("y1", "11");
-                line1.setAttribute("x2", "10");
-                line1.setAttribute("y2", "17");
-                svgEl2.appendChild(line1);
-
-                const line2 = document.createElementNS(SVG_NS, "line");
-                line2.setAttribute("x1", "14");
-                line2.setAttribute("y1", "11");
-                line2.setAttribute("x2", "14");
-                line2.setAttribute("y2", "17");
-                svgEl2.appendChild(line2);
-
-                deleteButton.empty();
-                deleteButton.appendChild(svgEl2);
-                deleteButton.addEventListener('click', () => {
-                    this.entries.splice(index, 1);
-                    this.renderAccountEntries(container);
-                });
+                this.createDeleteButton(entryDiv, index, container);
             }
+        });
+    }
+
+    private createAccountInput(entryDiv: HTMLElement, entry: Entry, index: number, container: HTMLElement): void {
+        const accountInputContainer = entryDiv.createDiv('hledger-account-input-container');
+        
+        const accountInput = accountInputContainer.createEl('input', {
+            type: 'text',
+            value: entry.account,
+            placeholder: 'Account',
+            cls: 'text-input hledger-account-input'
+        });
+
+        const suggestContainer = accountInputContainer.createDiv('hledger-account-suggest-container');
+        suggestContainer.style.display = 'none';
+        
+        this.setupAccountAutocomplete(accountInput, suggestContainer, entryDiv, entry);
+    }
+
+    private setupAccountAutocomplete(
+        accountInput: HTMLInputElement, 
+        suggestContainer: HTMLElement, 
+        entryDiv: HTMLElement, 
+        entry: Entry
+    ): void {
+        const showSuggestions = () => {
+            const inputValue = accountInput.value.toLowerCase();
+            if (!inputValue) {
+                suggestContainer.style.display = 'none';
+                return;
+            }
+            
+            const matches = this.filterAndSortAccounts(inputValue);
+            
+            if (matches.length === 0) {
+                suggestContainer.style.display = 'none';
+                return;
+            }
+            
+            this.displaySuggestions(matches, suggestContainer, accountInput, entryDiv, entry);
+        };
+        
+        const selectSuggestion = (account: string) => {
+            entry.account = account;
+            accountInput.value = account;
+            suggestContainer.style.display = 'none';
+            
+            const amountInput = entryDiv.querySelector('.hledger-amount-input') as HTMLInputElement;
+            if (amountInput) {
+                amountInput.focus();
+            }
+        };
+        
+        this.setupAccountAutocompleteEvents(accountInput, suggestContainer, showSuggestions, selectSuggestion);
+        
+        accountInput.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            entry.account = target.value;
+        });
+    }
+    
+    private filterAndSortAccounts(inputValue: string): string[] {
+        return this.accounts
+            .filter(account => account.toLowerCase().includes(inputValue))
+            .sort((a, b) => {
+                const aStartsWithInput = a.toLowerCase().startsWith(inputValue) ? 0 : 1;
+                const bStartsWithInput = b.toLowerCase().startsWith(inputValue) ? 0 : 1;
+                
+                if (aStartsWithInput !== bStartsWithInput) {
+                    return aStartsWithInput - bStartsWithInput;
+                }
+                
+                const aIndex = a.toLowerCase().indexOf(inputValue);
+                const bIndex = b.toLowerCase().indexOf(inputValue);
+                if (aIndex !== bIndex) {
+                    return aIndex - bIndex;
+                }
+                
+                return a.length - b.length;
+            })
+            .slice(0, 10);
+    }
+    
+    private displaySuggestions(
+        matches: string[], 
+        suggestContainer: HTMLElement, 
+        accountInput: HTMLInputElement, 
+        entryDiv: HTMLElement, 
+        entry: Entry
+    ): void {
+        suggestContainer.empty();
+        suggestContainer.style.display = 'block';
+        
+        const selectSuggestion = (account: string) => {
+            entry.account = account;
+            accountInput.value = account;
+            suggestContainer.style.display = 'none';
+            
+            const amountInput = entryDiv.querySelector('.hledger-amount-input') as HTMLInputElement;
+            if (amountInput) {
+                amountInput.focus();
+            }
+        };
+        
+        matches.forEach((account, idx) => {
+            const item = suggestContainer.createDiv({
+                cls: idx === 0 ? 'hledger-account-suggest-item selected' : 'hledger-account-suggest-item'
+            });
+            item.textContent = account;
+            
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                selectSuggestion(account);
+            });
+            
+            item.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                selectSuggestion(account);
+            });
+            
+            item.addEventListener('mouseenter', () => {
+                suggestContainer.querySelectorAll('.hledger-account-suggest-item').forEach(el => {
+                    el.removeClass('selected');
+                });
+                item.addClass('selected');
+            });
+        });
+    }
+
+    private setupAccountAutocompleteEvents(
+        accountInput: HTMLInputElement, 
+        suggestContainer: HTMLElement, 
+        showSuggestions: () => void, 
+        selectSuggestion: (account: string) => void
+    ): void {
+        accountInput.addEventListener('keydown', (e) => {
+            this.handleSuggestionKeyboardNavigation(e, suggestContainer, showSuggestions, selectSuggestion);
+        });
+        
+        accountInput.addEventListener('input', showSuggestions);
+        accountInput.addEventListener('focus', showSuggestions);
+        
+        accountInput.addEventListener('blur', (e) => {
+            setTimeout(() => {
+                if (!suggestContainer.contains(document.activeElement)) {
+                    suggestContainer.style.display = 'none';
+                }
+            }, 300);
+        });
+        
+        suggestContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+        });
+        
+        suggestContainer.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        });
+        
+        accountInput.addEventListener('click', () => {
+            if (!accountInput.value) {
+                showSuggestions();
+            }
+        });
+    }
+
+    private handleSuggestionKeyboardNavigation(
+        e: KeyboardEvent, 
+        suggestContainer: HTMLElement, 
+        showSuggestions: () => void, 
+        selectSuggestion: (account: string) => void
+    ): void {
+        if (suggestContainer.style.display === 'none') {
+            if (e.key === 'ArrowDown') {
+                showSuggestions();
+                e.preventDefault();
+            }
+            return;
+        }
+        
+        const items = suggestContainer.querySelectorAll('.hledger-account-suggest-item');
+        const selectedItem = suggestContainer.querySelector('.selected') as HTMLElement;
+        let selectedIndex = Array.from(items).indexOf(selectedItem);
+        
+        switch (e.key) {
+            case 'ArrowDown':
+                if (selectedIndex < items.length - 1) {
+                    items[selectedIndex].removeClass('selected');
+                    items[selectedIndex + 1].addClass('selected');
+                    
+                    const nextItem = items[selectedIndex + 1] as HTMLElement;
+                    const containerRect = suggestContainer.getBoundingClientRect();
+                    const itemRect = nextItem.getBoundingClientRect();
+                    
+                    if (itemRect.bottom > containerRect.bottom) {
+                        suggestContainer.scrollTop += (itemRect.bottom - containerRect.bottom);
+                    }
+                }
+                e.preventDefault();
+                break;
+            case 'ArrowUp':
+                if (selectedIndex > 0) {
+                    items[selectedIndex].removeClass('selected');
+                    items[selectedIndex - 1].addClass('selected');
+                    
+                    const prevItem = items[selectedIndex - 1] as HTMLElement;
+                    const containerRect = suggestContainer.getBoundingClientRect();
+                    const itemRect = prevItem.getBoundingClientRect();
+                    
+                    if (itemRect.top < containerRect.top) {
+                        suggestContainer.scrollTop -= (containerRect.top - itemRect.top);
+                    }
+                }
+                e.preventDefault();
+                break;
+            case 'Enter':
+                if (selectedItem) {
+                    selectSuggestion(selectedItem.textContent || '');
+                    e.preventDefault();
+                }
+                break;
+            case 'Escape':
+                suggestContainer.style.display = 'none';
+                e.preventDefault();
+                break;
+        }
+    }
+
+    private createAmountInput(entryDiv: HTMLElement, entry: Entry, index: number, container: HTMLElement): void {
+        const amountInput = entryDiv.createEl('input', {
+            type: 'text',
+            value: entry.amount ? entry.amount.toString(): '',
+            placeholder: 'Amount',
+            cls: 'text-input hledger-amount-input'
+        });
+        
+        amountInput.addEventListener('change', (e) => {
+            this.handleAmountChange(e, entry, index, container);
+        });
+    }
+    
+    private handleAmountChange(e: Event, entry: Entry, index: number, container: HTMLElement): void {
+        const target = e.target as HTMLInputElement;
+        let value = target.value.trim();
+        
+        value = this.processAmountValue(value, entry, target);
+        
+        if (index === 0 && this.entries.length === 2 && !this.isExchange) {
+            this.updateSecondRowAmount(entry.amount, container);
+        }
+    }
+    
+    private processAmountValue(value: string, entry: Entry, inputElement: HTMLInputElement): string {
+        let suffix = '';
+        if (value.toLowerCase().endsWith('k')) {
+            suffix = 'k';
+            value = value.slice(0, -1);
+        } else if (value.toLowerCase().endsWith('m')) {
+            suffix = 'm';
+            value = value.slice(0, -1);
+        }
+        
+        value = value.replace(/[^\d.-]/g, '');
+        value = value + suffix;
+        
+        if (value.toLowerCase().endsWith('k')) {
+            value = value.slice(0, -1);
+            entry.amount = (parseFloat(value) || 0) * 1000;
+            inputElement.value = entry.amount.toString();
+        } else if (value.toLowerCase().endsWith('m')) {
+            value = value.slice(0, -1);
+            entry.amount = (parseFloat(value) || 0) * 1000000;
+            inputElement.value = entry.amount.toString();
+        } else {
+            entry.amount = parseFloat(value) || 0;
+            inputElement.value = entry.amount.toString();
+        }
+        
+        return value;
+    }
+    
+    private updateSecondRowAmount(firstRowAmount: number, container: HTMLElement): void {
+        const secondRow = this.entries[1];
+        const secondAmountInput = container.querySelectorAll('.hledger-amount-input')[1] as HTMLInputElement;
+        
+        if (!secondRow.amount && secondAmountInput && (secondAmountInput.value === '' || secondAmountInput.value === '0')) {
+            secondRow.amount = -firstRowAmount;
+            secondAmountInput.value = secondRow.amount.toString();
+        }
+    }
+
+    private createCurrencySelect(entryDiv: HTMLElement, entry: Entry): void {
+        const currencySelect = entryDiv.createEl('select', {
+            cls: 'dropdown hledger-currency-select'
+        });
+        
+        this.settings.currencies.forEach(currency => {
+            const option = currencySelect.createEl('option', {
+                text: currency,
+                value: currency
+            });
+            if (currency === entry.currency) {
+                option.selected = true;
+            }
+        });
+        
+        currencySelect.addEventListener('change', (e) => {
+            const target = e.target as HTMLSelectElement;
+            entry.currency = target.value;
+        });
+    }
+
+    private createDeleteButton(entryDiv: HTMLElement, index: number, container: HTMLElement): void {
+        const deleteButton = entryDiv.createEl('button', {
+            cls: 'clickable-icon hledger-delete-button'
+        });
+        
+        const trashIcon = this.createTrashIcon();
+        deleteButton.empty();
+        deleteButton.appendChild(trashIcon);
+        
+        deleteButton.addEventListener('click', () => {
+            this.entries.splice(index, 1);
+            this.renderAccountEntries(container);
         });
     }
 

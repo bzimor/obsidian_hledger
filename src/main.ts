@@ -5,10 +5,8 @@ import { HledgerExportModal } from './ui/export-modal';
 import { HledgerImportModal } from './ui/import-modal';
 import { 
     formatLine, 
-    parseJournalTransactions, 
     FormatConfig,
     calculateDailyNotePathInfo,
-    ensureDirectoryExists,
     updateOrCreateDailyNoteHledgerSection
 } from './entry-utils';
 import {
@@ -24,6 +22,7 @@ import {
     processTransactionsToDailyNotes,
     formatHledgerTransaction,
 } from './import-utils';
+import { ensureDirectoryExists, parseJournalTransactions, normalizePath } from './utils';
 import * as moment from 'moment';
 
 export default class HledgerPlugin extends Plugin {
@@ -97,7 +96,6 @@ export default class HledgerPlugin extends Plugin {
         );
 
         try {
-
             await ensureDirectoryExists(targetFolder, this.app.vault.adapter);
 
             const formattedTransaction = formatHledgerTransaction(
@@ -143,7 +141,6 @@ export default class HledgerPlugin extends Plugin {
 
         try {
             const allFiles = await getAllFilesInFolder(this.settings.dailyNotesFolder!, adapter);
-    
             const filteredFiles = filterFilesByDateRange(allFiles, fromDate, toDate, dailyNotesFormat);
     
             if (filteredFiles.length === 0) {
@@ -164,16 +161,16 @@ export default class HledgerPlugin extends Plugin {
             }
     
             const journalContent = processedBlocks.join('\n\n') + '\n';
-    
-            const exportFilePath = `${this.settings.hledgerFolder}/${fileName}`.replace(/\\/g, '/');
+            const exportFilePath = normalizePath(`${this.settings.hledgerFolder}/${fileName}`);
+            
             await writeJournalToFile(
                 exportFilePath,
                 journalContent,
                 adapter,
                 replaceExisting
             );
+            
             new Notice(`Journal exported successfully to ${exportFilePath}`);
-    
         } catch (error) {
             console.error('Error during export:', error);
             const message = error instanceof Error ? error.message : String(error);
@@ -189,19 +186,18 @@ export default class HledgerPlugin extends Plugin {
             return;
         }
         
-        const journalFilePath = `${this.settings.hledgerFolder}/${journalFile}`;
-
-        new Notice(`Starting hledger journal import from ${journalFilePath}...`);
+        const journalFilePath = normalizePath(`${this.settings.hledgerFolder}/${journalFile}`);
         const adapter = this.app.vault.adapter;
+        
+        new Notice(`Starting hledger journal import from ${journalFilePath}...`);
         
         if (!await adapter.exists(journalFilePath)) {
             new Notice(`Journal file not found at ${journalFilePath}`);
             return;
         }
+        
         try {
-            const fullJournalPath = `${this.settings.hledgerFolder}/${journalFile}`;
-            
-            const journalContent = await this.app.vault.adapter.read(fullJournalPath);
+            const journalContent = await adapter.read(journalFilePath);
             const transactions = parseJournalTransactions(journalContent, this.settings.hledgerDateFormat);
             
             const dateRangeTransactions = groupTransactionsByDate(
@@ -214,7 +210,7 @@ export default class HledgerPlugin extends Plugin {
             await processTransactionsToDailyNotes(
                 dateRangeTransactions,
                 this.settings,
-                this.app.vault.adapter
+                adapter
             );
 
             new Notice('Daily transactions imported successfully');
