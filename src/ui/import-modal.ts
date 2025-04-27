@@ -50,7 +50,7 @@ export class HledgerImportModal extends Modal {
         
         // Add keyboard shortcut for quick import
         contentEl.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 this.handleImport();
             }

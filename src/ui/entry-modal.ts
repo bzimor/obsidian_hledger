@@ -287,7 +287,7 @@ export class HledgerEntryModal extends Modal {
 
     private setupKeyboardShortcuts(contentEl: HTMLElement): void {
         contentEl.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 this.handleSubmit();
             }
