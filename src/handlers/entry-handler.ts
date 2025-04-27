@@ -7,21 +7,16 @@ import {
     NumberFormat
 } from '../utils';
 
-// Amount formatting utilities
-
 /**
  * Formats a number according to the specified format
  */
 export function formatNumber(num: number, format: NumberFormat): string {
-    // Round to 2 decimal places
-    num = Math.round((num + Number.EPSILON) * 100) / 100;
-    
     const parts = num.toString().split('.');
     const integerPart = parts[0];
     let decimalPart = parts[1] || '00';
     
-    while (decimalPart.length < 2) {
-        decimalPart += '0';
+    if (decimalPart.length < 2) {
+        decimalPart = decimalPart.padEnd(2, '0');
     }
     
     let thousandsSeparator: string;
@@ -51,7 +46,6 @@ export function formatNumber(num: number, format: NumberFormat): string {
  */
 export function formatAmount(amount: number, currency: string, config: FormatConfig): string {
     const isNegative = amount < 0;
-    // Use absolute value for formatting, we'll add the negative sign in the right place
     const absAmount = Math.abs(amount);
     const formattedNumber = formatNumber(absAmount, config.numberFormat);
     const space = config.currencySpacing ? ' ' : '';
@@ -93,8 +87,6 @@ export function formatLine(
     
     return line;
 }
-
-// Daily note utilities
 
 export interface DailyNotePathInfo {
     targetFolder: string;
@@ -173,4 +165,4 @@ export async function updateOrCreateDailyNoteHledgerSection(
         console.error(`Error updating or creating daily note section in ${targetPath}:`, error);
         throw new Error(`Failed to update or create hledger section in ${targetPath}: ${error instanceof Error ? error.message : String(error)}`);
     }
-} 
+}

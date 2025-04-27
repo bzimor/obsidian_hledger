@@ -14,11 +14,9 @@ describe('Date regex pattern creation', () => {
     test('createDateRegexPattern creates valid patterns for YYYY-MM-DD format', () => {
         const regex = createDateRegexPattern('YYYY-MM-DD');
         
-        // Should match valid dates
         expect(regex.test('2023-01-15')).toBe(true);
         expect(regex.test('2023-01-15 Some description')).toBe(true);
         
-        // Should not match invalid formats
         expect(regex.test('01-15-2023')).toBe(false);
         expect(regex.test('2023/01/15')).toBe(false);
         expect(regex.test('Some text 2023-01-15')).toBe(false);
@@ -27,11 +25,9 @@ describe('Date regex pattern creation', () => {
     test('createDateRegexPattern creates valid patterns for YYYY/MM/DD format', () => {
         const regex = createDateRegexPattern('YYYY/MM/DD');
         
-        // Should match valid dates
         expect(regex.test('2023/01/15')).toBe(true);
         expect(regex.test('2023/01/15 Some description')).toBe(true);
         
-        // Should not match invalid formats
         expect(regex.test('01/15/2023')).toBe(false);
         expect(regex.test('2023-01-15')).toBe(false);
     });
@@ -39,11 +35,9 @@ describe('Date regex pattern creation', () => {
     test('createDateRegexPattern properly handles different date components', () => {
         const regex = createDateRegexPattern('DD.MM.YYYY');
         
-        // Should match valid dates
         expect(regex.test('15.01.2023')).toBe(true);
         expect(regex.test('15.01.2023 Some description')).toBe(true);
         
-        // Should not match invalid formats
         expect(regex.test('2023.01.15')).toBe(false);
         expect(regex.test('15/01/2023')).toBe(false);
     });
@@ -53,18 +47,14 @@ describe('Date removal', () => {
     test('createDateRemovalRegex creates pattern that removes date from transaction', () => {
         const regex = createDateRemovalRegex('YYYY-MM-DD');
         
-        // Remove date from transactions
         expect('2023-01-15 Groceries'.replace(regex, '')).toBe('Groceries');
         expect('2023-01-15   Rent payment'.replace(regex, '')).toBe('Rent payment');
-        
-        // Should handle transactions without descriptions
         expect('2023-01-15'.replace(regex, '')).toBe('');
     });
 
     test('createDateRemovalRegex works with different date formats', () => {
         const regex = createDateRemovalRegex('DD/MM/YYYY');
         
-        // Remove date from transactions
         expect('15/01/2023 Groceries'.replace(regex, '')).toBe('Groceries');
         expect('15/01/2023   Car repair'.replace(regex, '')).toBe('Car repair');
     });

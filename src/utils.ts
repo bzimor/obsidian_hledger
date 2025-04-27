@@ -30,7 +30,7 @@ export function createDateRegexPattern(hledgerDateFormat: string): RegExp {
  */
 export function createDateRemovalRegex(hledgerDateFormat: string): RegExp {
     const pattern = createDateRegexPattern(hledgerDateFormat).source;
-    return new RegExp(`^${pattern.substring(1)}\\s*`); // Remove ^ from the beginning and add \s*
+    return new RegExp(`^${pattern.substring(1)}\\s*`);
 }
 
 /**
@@ -140,7 +140,6 @@ export async function ensureDirectoryExists(directoryPath: string, adapter: Data
  */
 export function getParentDirectory(path: string): string {
     const normalizedPath = normalizePath(path);
-    // Remove trailing slash if present before finding the last slash
     const pathWithoutTrailingSlash = normalizedPath.endsWith('/') 
         ? normalizedPath.slice(0, -1) 
         : normalizedPath;
