@@ -1,15 +1,11 @@
 import { DataAdapter } from 'obsidian';
 import * as moment from 'moment';
-import { createDateRegexPattern, ensureDirectoryExists } from './utils';
-
-export type NumberFormat = 'comma-dot' | 'space-comma' | 'dot-comma';
-
-export interface FormatConfig {
-    numberFormat: NumberFormat;
-    currencySpacing: boolean;
-    currencyPlacement: 'prepend' | 'append';
-    lineLength: number;
-}
+import { 
+    createDateRegexPattern, 
+    ensureDirectoryExists, 
+    FormatConfig,
+    NumberFormat
+} from '../utils';
 
 // Amount formatting utilities
 
@@ -17,6 +13,9 @@ export interface FormatConfig {
  * Formats a number according to the specified format
  */
 export function formatNumber(num: number, format: NumberFormat): string {
+    // Round to 2 decimal places
+    num = Math.round((num + Number.EPSILON) * 100) / 100;
+    
     const parts = num.toString().split('.');
     const integerPart = parts[0];
     let decimalPart = parts[1] || '00';
@@ -51,13 +50,20 @@ export function formatNumber(num: number, format: NumberFormat): string {
  * Formats an amount with its currency according to the specified configuration
  */
 export function formatAmount(amount: number, currency: string, config: FormatConfig): string {
-    const formattedNumber = formatNumber(amount, config.numberFormat);
+    const isNegative = amount < 0;
+    // Use absolute value for formatting, we'll add the negative sign in the right place
+    const absAmount = Math.abs(amount);
+    const formattedNumber = formatNumber(absAmount, config.numberFormat);
     const space = config.currencySpacing ? ' ' : '';
     
     if (config.currencyPlacement === 'prepend') {
-        return `${currency}${space}${formattedNumber}`;
+        return isNegative 
+            ? `${currency}${space}-${formattedNumber}`
+            : `${currency}${space}${formattedNumber}`;
     } else {
-        return `${formattedNumber}${space}${currency}`;
+        return isNegative
+            ? `-${formattedNumber}${space}${currency}`
+            : `${formattedNumber}${space}${currency}`;
     }
 }
 
@@ -167,4 +173,4 @@ export async function updateOrCreateDailyNoteHledgerSection(
         console.error(`Error updating or creating daily note section in ${targetPath}:`, error);
         throw new Error(`Failed to update or create hledger section in ${targetPath}: ${error instanceof Error ? error.message : String(error)}`);
     }
-}
+} 

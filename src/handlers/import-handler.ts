@@ -1,13 +1,13 @@
 import * as moment from 'moment';
 import { DataAdapter } from 'obsidian';
-import { HledgerSettings } from './settings';
-import { FormatConfig } from './entry-utils';
+import { HledgerSettings } from '../settings';
 import { 
     extractTransactionDate, 
     createDateRemovalRegex, 
     getDateFromFilename,
-    ensureDirectoryExists
-} from './utils';
+    ensureDirectoryExists,
+    FormatConfig
+} from '../utils';
 
 /**
  * Validates import settings to ensure required folders and formats are set
@@ -249,4 +249,4 @@ export function extractDateFromLine(line: string, hledgerDateFormat: string): st
         }
     }
     return null;
-}
+} 

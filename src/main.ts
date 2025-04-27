@@ -5,24 +5,24 @@ import { HledgerExportModal } from './ui/export-modal';
 import { HledgerImportModal } from './ui/import-modal';
 import { 
     formatLine, 
-    FormatConfig,
     calculateDailyNotePathInfo,
-    updateOrCreateDailyNoteHledgerSection
-} from './entry-utils';
-import {
+    updateOrCreateDailyNoteHledgerSection,
     validateExportSettings, 
     processHledgerFiles,
     getAllFilesInFolder, 
     filterFilesByDateRange, 
-    writeJournalToFile 
-} from './export-utils'; 
-import {
+    writeJournalToFile,
     validateImportSettings,
     groupTransactionsByDate,
     processTransactionsToDailyNotes,
-    formatHledgerTransaction,
-} from './import-utils';
-import { ensureDirectoryExists, parseJournalTransactions, normalizePath } from './utils';
+    formatHledgerTransaction
+} from './handlers';
+import { 
+    ensureDirectoryExists, 
+    parseJournalTransactions, 
+    normalizePath,
+    FormatConfig 
+} from './utils';
 import * as moment from 'moment';
 
 export default class HledgerPlugin extends Plugin {

@@ -138,8 +138,27 @@ export async function ensureDirectoryExists(directoryPath: string, adapter: Data
 /**
  * Gets the parent directory of a file path
  */
-export function getParentDirectory(filePath: string): string {
-    const normalizedPath = normalizePath(filePath);
-    const lastSlashIndex = normalizedPath.lastIndexOf('/');
-    return lastSlashIndex > 0 ? normalizedPath.substring(0, lastSlashIndex) : '';
+export function getParentDirectory(path: string): string {
+    const normalizedPath = normalizePath(path);
+    // Remove trailing slash if present before finding the last slash
+    const pathWithoutTrailingSlash = normalizedPath.endsWith('/') 
+        ? normalizedPath.slice(0, -1) 
+        : normalizedPath;
+    const lastSlashIndex = pathWithoutTrailingSlash.lastIndexOf('/');
+    
+    if (lastSlashIndex === -1) {
+        return '';
+    }
+    
+    return pathWithoutTrailingSlash.substring(0, lastSlashIndex);
+}
+
+// Format types and interfaces used across multiple handlers
+export type NumberFormat = 'comma-dot' | 'space-comma' | 'dot-comma';
+
+export interface FormatConfig {
+    numberFormat: NumberFormat;
+    currencySpacing: boolean;
+    currencyPlacement: 'prepend' | 'append';
+    lineLength: number;
 } 

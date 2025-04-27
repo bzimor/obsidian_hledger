@@ -1,13 +1,13 @@
 import * as moment from 'moment';
 import { DataAdapter } from 'obsidian';
-import { HledgerSettings } from './settings';
+import { HledgerSettings } from '../settings';
 import { 
     extractHledgerBlock, 
     getDateFromFilename, 
     normalizePath, 
     ensureDirectoryExists,
     getParentDirectory
-} from './utils';
+} from '../utils';
 
 /**
  * Validates export settings to ensure required folders and formats are set
@@ -203,7 +203,7 @@ export async function extractHledgerBlocks(filePath: string, adapter: DataAdapte
 }
 
 /**
- * Writes journal content to a file
+ * Writes transactions to a journal file
  */
 export async function writeJournalToFile(
     filePath: string, 
@@ -212,23 +212,20 @@ export async function writeJournalToFile(
     replaceExisting: boolean = false
 ): Promise<void> {
     try {
-        const normalizedPath = normalizePath(filePath);
-        const parentDir = getParentDirectory(normalizedPath);
-
-        if (parentDir) {
-            await ensureDirectoryExists(parentDir, adapter);
+        const folder = getParentDirectory(filePath);
+        if (folder) {
+            await ensureDirectoryExists(folder, adapter);
         }
-
-        if (!replaceExisting && await adapter.exists(normalizedPath)) {
-             throw new Error(`File ${normalizedPath} already exists and replaceExisting is false.`);
+        
+        let fileContent = content;
+        if (!replaceExisting && await adapter.exists(filePath)) {
+            const existingContent = await adapter.read(filePath);
+            fileContent = existingContent + '\n\n' + content;
         }
-
-        await adapter.write(normalizedPath, content);
+        
+        await adapter.write(filePath, fileContent);
     } catch (error) {
-        console.error(`Error writing to file ${filePath}:`, error);
-        if (error instanceof Error && (error.message.startsWith('Failed to') || error.message.includes('already exists'))) {
-            throw error;
-        }
-        throw new Error(`Failed to write journal to ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(`Error writing to journal file ${filePath}:`, error);
+        throw new Error(`Failed to write to journal file: ${error instanceof Error ? error.message : String(error)}`);
     }
-}
+} 
