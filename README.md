@@ -113,7 +113,7 @@ These shortcuts work in both the regular transaction and exchange transaction fo
 
 ## Requirements
 
-- Obsidian v0.15.0 or higher
+- Obsidian v1.0.0 or higher
 - For optimal use, familiarity with hledger's journal format
 
 ## Support
