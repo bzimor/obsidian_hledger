@@ -1,7 +1,7 @@
 {
     "id": "hledger-notes",
     "name": "Hledger Notes",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "minAppVersion": "1.0.0",
     "description": "Create and manage hledger entries directly in your daily notes.",
     "author": "Boburmirzo Khamrakulov",
