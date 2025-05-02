@@ -1,5 +1,11 @@
-import { App, PluginSettingTab, Setting, TFolder } from 'obsidian';
+import { App, PluginSettingTab, Setting, TFolder, SearchComponent } from 'obsidian';
 import HledgerPlugin from './main';
+
+// Extend the SearchComponent interface to include the properties we need
+interface ExtendedSearchComponent extends SearchComponent {
+    containerEl: HTMLElement;
+    inputEl: HTMLInputElement;
+}
 
 export interface HledgerSettings {
     dailyNotesFolder: string;
@@ -59,7 +65,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
             
-            this.setupFolderAutocomplete(search);
+            this.setupFolderAutocomplete(search as ExtendedSearchComponent);
         });
 
     new Setting(containerEl)
@@ -98,7 +104,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
                 
-                this.setupFolderAutocomplete(search);
+                this.setupFolderAutocomplete(search as ExtendedSearchComponent);
             });
 
         new Setting(containerEl)
@@ -197,12 +203,12 @@ export class HledgerSettingTab extends PluginSettingTab {
 
     }
 
-    private setupFolderAutocomplete(search: any): void {
+    private setupFolderAutocomplete(search: ExtendedSearchComponent): void {
         const folders = this.app.vault.getAllLoadedFiles()
             .filter((f): f is TFolder => f instanceof TFolder)
             .map(folder => folder.path);
         
-        const searchEl = (search as any).containerEl as HTMLElement;
+        const searchEl = search.containerEl;
         searchEl.addClass('hledger-settings-search');
         
         // Track if suggestions are currently shown

@@ -375,8 +375,7 @@ export class HledgerEntryModal extends Modal {
             cls: 'text-input hledger-account-input'
         });
 
-        const suggestContainer = accountInputContainer.createDiv('hledger-account-suggest-container');
-        suggestContainer.style.display = 'none';
+        const suggestContainer = accountInputContainer.createDiv('hledger-account-suggest-container hidden');
         
         this.setupAccountAutocomplete(accountInput, suggestContainer, entryDiv, entry);
     }
@@ -390,14 +389,14 @@ export class HledgerEntryModal extends Modal {
         const showSuggestions = () => {
             const inputValue = accountInput.value.toLowerCase();
             if (!inputValue) {
-                suggestContainer.style.display = 'none';
+                suggestContainer.addClass('hidden');
                 return;
             }
             
             const matches = this.filterAndSortAccounts(inputValue);
             
             if (matches.length === 0) {
-                suggestContainer.style.display = 'none';
+                suggestContainer.addClass('hidden');
                 return;
             }
             
@@ -407,7 +406,7 @@ export class HledgerEntryModal extends Modal {
         const selectSuggestion = (account: string) => {
             entry.account = account;
             accountInput.value = account;
-            suggestContainer.style.display = 'none';
+            suggestContainer.addClass('hidden');
             
             const amountInput = entryDiv.querySelector('.hledger-amount-input') as HTMLInputElement;
             if (amountInput) {
@@ -453,12 +452,12 @@ export class HledgerEntryModal extends Modal {
         entry: Entry
     ): void {
         suggestContainer.empty();
-        suggestContainer.style.display = 'block';
+        suggestContainer.removeClass('hidden');
         
         const selectSuggestion = (account: string) => {
             entry.account = account;
             accountInput.value = account;
-            suggestContainer.style.display = 'none';
+            suggestContainer.addClass('hidden');
             
             const amountInput = entryDiv.querySelector('.hledger-amount-input') as HTMLInputElement;
             if (amountInput) {
@@ -507,7 +506,7 @@ export class HledgerEntryModal extends Modal {
         accountInput.addEventListener('blur', (e) => {
             setTimeout(() => {
                 if (!suggestContainer.contains(document.activeElement)) {
-                    suggestContainer.style.display = 'none';
+                    suggestContainer.addClass('hidden');
                 }
             }, 300);
         });
@@ -533,7 +532,7 @@ export class HledgerEntryModal extends Modal {
         showSuggestions: () => void, 
         selectSuggestion: (account: string) => void
     ): void {
-        if (suggestContainer.style.display === 'none') {
+        if (suggestContainer.hasClass('hidden')) {
             if (e.key === 'ArrowDown') {
                 showSuggestions();
                 e.preventDefault();
@@ -583,7 +582,7 @@ export class HledgerEntryModal extends Modal {
                 }
                 break;
             case 'Escape':
-                suggestContainer.style.display = 'none';
+                suggestContainer.addClass('hidden');
                 e.preventDefault();
                 break;
         }

@@ -69,6 +69,10 @@
     scrollbar-width: thin;
 }
 
+.hledger-account-suggest-container.hidden {
+    display: none;
+}
+
 .hledger-account-suggest-container::-webkit-scrollbar {
     width: 8px;
 }

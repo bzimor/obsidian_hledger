@@ -1,9 +1,9 @@
 {
     "id": "hledger-notes",
     "name": "Hledger Notes",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "minAppVersion": "1.0.0",
-    "description": "Create and manage hledger entries directly in your vault. Track transactions in daily notes and consolidate them into the hledger journal.",
+    "description": "Create and manage hledger entries directly in your vault.",
     "author": "Boburmirzo Khamrakulov",
     "authorUrl": "https://github.com/bzimor",
     "isDesktopOnly": false,
