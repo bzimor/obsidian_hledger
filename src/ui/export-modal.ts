@@ -49,7 +49,6 @@ export class HledgerExportModal extends Modal {
         this.createFileOptions(contentEl);
         this.createExportButton(contentEl);
         
-        // Add keyboard shortcut for quick export
         contentEl.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -155,7 +154,6 @@ export class HledgerExportModal extends Modal {
             return false;
         }
         
-        // Check if file extension is valid
         if (!trimmedJournalFile.endsWith('.journal') && 
             !trimmedJournalFile.endsWith('.hledger') && 
             !trimmedJournalFile.endsWith('.ledger')) {

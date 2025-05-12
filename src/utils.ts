@@ -153,7 +153,6 @@ export function getParentDirectory(path: string): string {
     return pathWithoutTrailingSlash.substring(0, lastSlashIndex);
 }
 
-// Format types and interfaces used across multiple handlers
 export type NumberFormat = 'comma-dot' | 'space-comma' | 'dot-comma';
 
 export interface FormatConfig {

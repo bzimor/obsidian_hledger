@@ -2,7 +2,6 @@ import { App, Modal, TFile, FuzzySuggestModal, Notice } from 'obsidian';
 import { HledgerSettings } from '../settings';
 import moment from 'moment';
 
-// Type definitions
 interface Entry {
     account: string;
     amount: number;
@@ -301,15 +300,29 @@ export class HledgerEntryModal extends Modal {
             return;
         }
 
-        const zeroAmounts = this.entries.filter(entry => entry.amount === 0);
-        if (zeroAmounts.length > 0) {
-            new Notice('Amounts cannot be zero');
-            return;
-        }
-
-        if (!this.isExchange) {
+        const emptyAmounts = this.entries.filter(entry => {
+            const amountInput = entry.amount !== undefined ? entry.amount.toString() : '';
+            return amountInput === '0' || amountInput === '' || amountInput.trim() === '' || isNaN(entry.amount);
+        });
+        
+        if (this.isExchange) {
+            if (emptyAmounts.length > 0) {
+                new Notice('Please fill in all amount fields');
+                return;
+            }
+            
+            if (this.entries.every(entry => entry.amount === 0)) {
+                new Notice('At least one amount must be non-zero in exchange mode');
+                return;
+            }
+        } else {
+            if (emptyAmounts.length > 0) {
+                new Notice('Please fill in all amount fields with valid numbers');
+                return;
+            }
+            
             const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
-            const epsilon = 0.0001; // Small tolerance for floating point comparison
+            const epsilon = 0.0001;
             if (Math.abs(totalAmount) > epsilon) {
                 new Notice(`Transaction does not balance. Total is ${totalAmount.toFixed(2)}`);
                 return;
@@ -322,7 +335,6 @@ export class HledgerEntryModal extends Modal {
 
     private async loadAccounts() {
         if (!this.settings.accountsFile || !this.settings.hledgerFolder) {
-            console.log('No accounts file or Hledger folder specified');
             return;
         }
 
@@ -341,9 +353,6 @@ export class HledgerEntryModal extends Modal {
                         return match ? match[1].trim() : null;
                     })
                     .filter((account): account is string => account !== null);
-                
-            } else {
-                console.log('Accounts file not found:', accountsPath);
             }
         } catch (error) {
             console.error('Error loading accounts file:', error);
@@ -596,23 +605,29 @@ export class HledgerEntryModal extends Modal {
             cls: 'text-input hledger-amount-input'
         });
         
+        amountInput.addEventListener('input', (e) => {
+            const target = e.target as HTMLInputElement;
+            let value = target.value.trim();
+            value = this.processAmountValue(value, entry, target);
+        });
+        
         amountInput.addEventListener('change', (e) => {
-            this.handleAmountChange(e, entry, index, container);
+            const target = e.target as HTMLInputElement;
+            let value = target.value.trim();
+            value = this.processAmountValue(value, entry, target);
+            
+            if (index === 0 && this.entries.length === 2 && !this.isExchange) {
+                this.updateSecondRowAmount(entry.amount, container);
+            }
         });
     }
     
-    private handleAmountChange(e: Event, entry: Entry, index: number, container: HTMLElement): void {
-        const target = e.target as HTMLInputElement;
-        let value = target.value.trim();
-        
-        value = this.processAmountValue(value, entry, target);
-        
-        if (index === 0 && this.entries.length === 2 && !this.isExchange) {
-            this.updateSecondRowAmount(entry.amount, container);
-        }
-    }
-    
     private processAmountValue(value: string, entry: Entry, inputElement: HTMLInputElement): string {
+        if (!value.trim()) {
+            entry.amount = NaN;
+            return '';
+        }
+        
         let suffix = '';
         if (value.toLowerCase().endsWith('k')) {
             suffix = 'k';
@@ -622,20 +637,39 @@ export class HledgerEntryModal extends Modal {
             value = value.slice(0, -1);
         }
         
+        if (value.includes('.')) {
+            value = value.replace(/,/g, '');
+        } 
+        else if ((value.match(/,/g) || []).length === 1 && !value.includes('.')) {
+            value = value.replace(',', '.');
+        }
+        else {
+            value = value.replace(/,/g, '');
+        }
+        
         value = value.replace(/[^\d.-]/g, '');
+        
+        const decimalPoints = (value.match(/\./g) || []).length;
+        if (decimalPoints > 1) {
+            const parts = value.split('.');
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
         value = value + suffix;
         
         if (value.toLowerCase().endsWith('k')) {
             value = value.slice(0, -1);
-            entry.amount = (parseFloat(value) || 0) * 1000;
+            entry.amount = Math.round((parseFloat(value) || 0) * 1000);
             inputElement.value = entry.amount.toString();
         } else if (value.toLowerCase().endsWith('m')) {
             value = value.slice(0, -1);
-            entry.amount = (parseFloat(value) || 0) * 1000000;
+            entry.amount = Math.round((parseFloat(value) || 0) * 1000000);
             inputElement.value = entry.amount.toString();
         } else {
             entry.amount = parseFloat(value) || 0;
-            inputElement.value = entry.amount.toString();
+            if (value !== inputElement.value) {
+                inputElement.value = value;
+            }
         }
         
         return value;
@@ -645,9 +679,9 @@ export class HledgerEntryModal extends Modal {
         const secondRow = this.entries[1];
         const secondAmountInput = container.querySelectorAll('.hledger-amount-input')[1] as HTMLInputElement;
         
-        if (!secondRow.amount && secondAmountInput && (secondAmountInput.value === '' || secondAmountInput.value === '0')) {
+        if (secondAmountInput && !Number.isNaN(firstRowAmount) && (secondAmountInput.value === '' || secondAmountInput.value === '0')) {
             secondRow.amount = -firstRowAmount;
-            secondAmountInput.value = secondRow.amount.toString();
+            secondAmountInput.value = (-firstRowAmount).toString();
         }
     }
 

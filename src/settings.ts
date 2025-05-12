@@ -1,7 +1,6 @@
 import { App, PluginSettingTab, Setting, TFolder, SearchComponent } from 'obsidian';
 import HledgerPlugin from './main';
 
-// Extend the SearchComponent interface to include the properties we need
 interface ExtendedSearchComponent extends SearchComponent {
     containerEl: HTMLElement;
     inputEl: HTMLInputElement;
@@ -211,10 +210,8 @@ export class HledgerSettingTab extends PluginSettingTab {
         const searchEl = search.containerEl;
         searchEl.addClass('hledger-settings-search');
         
-        // Track if suggestions are currently shown
         let suggestionsShown = false;
         
-        // Function to remove suggestions
         const removeSuggestions = () => {
             const suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
             if (suggestionsContainer) {
@@ -224,49 +221,39 @@ export class HledgerSettingTab extends PluginSettingTab {
             }
         };
         
-        // Document click handler
         const documentClickHandler = (e: MouseEvent) => {
             if (!searchEl.contains(e.target as Node)) {
                 removeSuggestions();
             }
         };
         
-        // Show suggestions
         const showSuggestions = () => {
             const currentValue = search.inputEl.value;
             const suggestions = folders.filter(f => 
                 f.toLowerCase().contains(currentValue.toLowerCase()));
             
-            // Remove any existing suggestions container
             removeSuggestions();
             
             if (suggestions.length === 0) {
                 return;
             }
             
-            // Create a new suggestions container
             const suggestionsContainer = createDiv('hledger-folder-suggestions');
             searchEl.appendChild(suggestionsContainer);
             suggestionsShown = true;
             
-            // Add suggestions
             suggestions.forEach(suggestion => {
                 const suggestionEl = suggestionsContainer.createDiv('hledger-suggestion-item');
                 suggestionEl.setText(suggestion);
                 
-                // Use mousedown instead of click to handle the event before blur
                 suggestionEl.addEventListener('mousedown', (e: MouseEvent) => {
-                    // Prevent default to avoid losing focus
                     e.preventDefault();
                     
-                    // Update the input value
                     search.inputEl.value = suggestion;
                     search.inputEl.dispatchEvent(new Event('input', { bubbles: true }));
                     
-                    // Remove suggestions
                     removeSuggestions();
                     
-                    // Return focus to the input
                     setTimeout(() => {
                         search.inputEl.focus();
                         search.inputEl.blur();
@@ -274,21 +261,13 @@ export class HledgerSettingTab extends PluginSettingTab {
                 });
             });
             
-            // Add the document click handler
             document.addEventListener('click', documentClickHandler);
         };
         
-        // Focus handler
-        search.inputEl.addEventListener('focus', showSuggestions);
-        
-        // Input handler
+        search.inputEl.addEventListener('focus', showSuggestions);        
         search.inputEl.addEventListener('input', showSuggestions);
-        
-        // Blur handler - delay to allow click events on suggestions
         search.inputEl.addEventListener('blur', (e: FocusEvent) => {
-            // Small delay to allow click events on suggestions to fire first
             setTimeout(() => {
-                // Only remove if the click wasn't on a suggestion
                 if (suggestionsShown && !(e.relatedTarget as Element)?.closest('.hledger-folder-suggestions')) {
                     removeSuggestions();
                 }
