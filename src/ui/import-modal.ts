@@ -48,7 +48,6 @@ export class HledgerImportModal extends Modal {
         this.createFileOptions(contentEl);
         this.createImportButton(contentEl);
         
-        // Add keyboard shortcut for quick import
         contentEl.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -142,9 +141,7 @@ export class HledgerImportModal extends Modal {
             return false;
         }
         
-        // Validate file exists in hledger folder if specified
         if (this.settings.hledgerFolder) {
-            // Just check extension for now
             if (!trimmedJournalFile.endsWith('.journal') && 
                 !trimmedJournalFile.endsWith('.hledger') && 
                 !trimmedJournalFile.endsWith('.ledger')) {
