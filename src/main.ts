@@ -63,7 +63,6 @@ export default class HledgerPlugin extends Plugin {
     }
 
     onunload(): void {
-        console.log('Unloading hledger plugin');
     }
 
     async loadSettings(): Promise<void> {
