@@ -93,7 +93,9 @@ export class HledgerEntryModal extends Modal {
         await this.loadAccounts();
 
         this.createModalHeader(contentEl);
-        this.createDescriptionInput(contentEl);
+        
+        const descriptionRow = contentEl.createDiv('hledger-description-row');
+        this.createDescriptionInput(descriptionRow);
         
         const entriesContainer = contentEl.createDiv('hledger-entries-container');
         this.renderAccountEntries(entriesContainer);
@@ -104,6 +106,12 @@ export class HledgerEntryModal extends Modal {
 
     private createModalHeader(contentEl: HTMLElement): void {
         const dateRow = contentEl.createDiv({ cls: 'hledger-date-row' });
+
+        const dateInput = dateRow.createEl('input', {
+            type: 'date',
+            value: this.date,
+            cls: 'hledger-date-input'
+        });
 
         const typeToggle = dateRow.createEl('select', {
             cls: 'dropdown hledger-type-toggle'
@@ -120,11 +128,6 @@ export class HledgerEntryModal extends Modal {
 
         typeToggle.value = this.isExchange ? 'exchange' : 'transaction';
 
-        const dateInput = dateRow.createEl('input', {
-            type: 'date',
-            value: this.date,
-            cls: 'hledger-date-input'
-        });
         dateInput.addEventListener('change', (e) => {
             const target = e.target as HTMLInputElement;
             this.date = target.value;
@@ -136,8 +139,8 @@ export class HledgerEntryModal extends Modal {
         });
     }
 
-    private createDescriptionInput(contentEl: HTMLElement): void {
-        const descriptionInput = contentEl.createEl('input', {
+    private createDescriptionInput(container: HTMLElement): void {
+        const descriptionInput = container.createEl('input', {
             type: 'text',
             placeholder: 'Description',
             value: this.description,
@@ -148,6 +151,29 @@ export class HledgerEntryModal extends Modal {
             this.description = target.value;
         });
         
+        if (!this.isExchange) {
+            const currencySelect = container.createEl('select', {
+                cls: 'dropdown hledger-transaction-currency-select'
+            });
+            
+            this.settings.currencies.forEach(currency => {
+                const option = currencySelect.createEl('option', {
+                    text: currency,
+                    value: currency
+                });
+                if (currency === this.entries[0].currency) {
+                    option.selected = true;
+                }
+            });
+            
+            currencySelect.addEventListener('change', (e) => {
+                const target = e.target as HTMLSelectElement;
+                this.entries.forEach(entry => {
+                    entry.currency = target.value;
+                });
+            });
+        }
+        
         descriptionInput.focus();
     }
 
@@ -156,6 +182,14 @@ export class HledgerEntryModal extends Modal {
         
         const entriesContainer = contentEl.querySelector('.hledger-entries-container') as HTMLElement;
         const leftButtons = contentEl.querySelector('.hledger-left-buttons') as HTMLElement;
+        
+        const descriptionRow = contentEl.querySelector('.hledger-description-row') as HTMLElement;
+        if (descriptionRow) {
+            const currentDescription = this.description;
+            descriptionRow.empty();
+            this.description = currentDescription;
+            this.createDescriptionInput(descriptionRow);
+        }
         
         if (this.isExchange) {
             this.entries = [
@@ -189,7 +223,15 @@ export class HledgerEntryModal extends Modal {
             this.createAddButton(leftButtons, entriesContainer);
         }
 
-        const submitButton = buttonsContainer.createEl('button', {
+        const rightButtons = buttonsContainer.createDiv('hledger-right-buttons');
+        
+        const submitAndNewButton = rightButtons.createEl('button', {
+            cls: 'mod-cta',
+            text: 'Submit + New'
+        });
+        submitAndNewButton.addEventListener('click', () => this.handleSubmitAndNew());
+
+        const submitButton = rightButtons.createEl('button', {
             cls: 'mod-cta',
             text: 'Submit'
         });
@@ -293,11 +335,21 @@ export class HledgerEntryModal extends Modal {
         });
     }
 
-    private handleSubmit(): void {
+    private handleSubmitAndNew(): void {
+        if (this.validateForm()) {
+            this.onSubmit(this.date, this.description, this.entries);
+            
+            const newModal = new HledgerEntryModal(this.app, this.settings, this.onSubmit);
+            this.close();
+            newModal.open();
+        }
+    }
+
+    private validateForm(): boolean {
         const emptyAccounts = this.entries.filter(entry => !entry.account.trim());
         if (emptyAccounts.length > 0) {
             new Notice('Please fill in all account names');
-            return;
+            return false;
         }
 
         const emptyAmounts = this.entries.filter(entry => {
@@ -308,29 +360,34 @@ export class HledgerEntryModal extends Modal {
         if (this.isExchange) {
             if (emptyAmounts.length > 0) {
                 new Notice('Please fill in all amount fields');
-                return;
+                return false;
             }
             
             if (this.entries.every(entry => entry.amount === 0)) {
                 new Notice('At least one amount must be non-zero in exchange mode');
-                return;
+                return false;
             }
         } else {
             if (emptyAmounts.length > 0) {
                 new Notice('Please fill in all amount fields with valid numbers');
-                return;
+                return false;
             }
             
             const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
             const epsilon = 0.0001;
             if (Math.abs(totalAmount) > epsilon) {
                 new Notice(`Transaction does not balance. Total is ${totalAmount.toFixed(2)}`);
-                return;
+                return false;
             }
         }
+        return true;
+    }
 
-        this.onSubmit(this.date, this.description, this.entries);
-        this.close();
+    private handleSubmit(): void {
+        if (this.validateForm()) {
+            this.onSubmit(this.date, this.description, this.entries);
+            this.close();
+        }
     }
 
     private async loadAccounts() {
@@ -366,7 +423,10 @@ export class HledgerEntryModal extends Modal {
             
             this.createAccountInput(entryDiv, entry, index, container);
             this.createAmountInput(entryDiv, entry, index, container);
-            this.createCurrencySelect(entryDiv, entry);
+            
+            if (this.isExchange) {
+                this.createCurrencySelect(entryDiv, entry);
+            }
 
             if (this.entries.length > 2 && !this.isExchange) {
                 this.createDeleteButton(entryDiv, index, container);
@@ -726,3 +786,4 @@ export class HledgerEntryModal extends Modal {
         contentEl.empty();
     }
 }
+

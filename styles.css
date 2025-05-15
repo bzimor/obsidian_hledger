@@ -131,7 +131,7 @@
     display: flex;
     align-items: center;
     margin-bottom: 1em;
-    gap: 1em;
+    gap: 0.5em;
 }
 
 .hledger-type-toggle {
@@ -152,6 +152,11 @@
     gap: 0.5em;
     align-items: center;
     justify-content: space-between;
+}
+
+.hledger-right-buttons {
+    display: flex;
+    gap: 0.5em;
 }
 
 .hledger-add-account-button {
@@ -219,7 +224,7 @@
 
 .hledger-suggestion-item:hover {
     background-color: var(--background-modifier-hover);
-} 
+}
 
 .hledger-warning-note {
     background-color: var(--text-warning);
@@ -233,12 +238,46 @@
     gap: 6px;
 }
 
+.hledger-description-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 1em;
+    gap: 0.5em;
+}
+
+.hledger-description-row .hledger-description-input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.hledger-transaction-currency-select {
+    width: auto;
+    min-width: 80px;
+}
+
 /* Mobile styles for entry rows */
 @media screen and (max-width: 600px) {
     .hledger-entry-row {
         flex-direction: column;
         align-items: stretch;
         margin-bottom: 1em;
+    }
+    
+    .hledger-description-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5em;
+        margin-bottom: 1em;
+    }
+    
+    .hledger-description-row .hledger-description-input {
+        margin-bottom: 0.5em;
+    }
+    
+    .hledger-transaction-currency-select {
+        width: 100%;
     }
     
     .hledger-account-input-container {
