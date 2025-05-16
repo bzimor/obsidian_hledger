@@ -1,5 +1,4 @@
-import { DataAdapter } from 'obsidian';
-import * as moment from 'moment';
+import { DataAdapter, moment } from 'obsidian';
 import { 
     createDateRegexPattern, 
     ensureDirectoryExists, 

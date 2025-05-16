@@ -8,7 +8,7 @@ import {
     normalizePath,
     getParentDirectory
 } from '../src/utils';
-import * as moment from 'moment';
+import { moment } from 'obsidian';
 
 describe('Date regex pattern creation', () => {
     test('createDateRegexPattern creates valid patterns for YYYY-MM-DD format', () => {

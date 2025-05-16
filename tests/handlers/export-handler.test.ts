@@ -6,7 +6,7 @@ import {
     writeJournalToFile
 } from '../../src/handlers/export-handler';
 import { HledgerSettings } from '../../src/settings';
-import moment from 'moment';
+import { moment } from 'obsidian';
 
 // Mock the DataAdapter
 const mockAdapter = {

@@ -1,5 +1,4 @@
-import * as moment from 'moment';
-import { DataAdapter } from 'obsidian';
+import { DataAdapter, moment } from 'obsidian';
 
 /**
  * Common date-related utility functions and pattern generators
@@ -83,7 +82,7 @@ export function getDateFromFilename(filePath: string, format: string): moment.Mo
     const filename = filePath.split('/').pop() || '';
     const dateString = filename.replace(/\.md$/i, '');
 
-    const date = moment.default(dateString, format, true);
+    const date = moment(dateString, format, true);
     return date.isValid() ? date : null;
 }
 

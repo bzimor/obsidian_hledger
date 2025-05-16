@@ -1,6 +1,5 @@
-import { App, Modal, Setting, TextComponent, Notice } from 'obsidian';
+import { App, Modal, Setting, TextComponent, Notice, moment } from 'obsidian';
 import { HledgerSettings } from '../settings';
-import moment from 'moment';
 
 interface ExportOptions {
     fromDate: string;
@@ -58,7 +57,7 @@ export class HledgerExportModal extends Modal {
     }
     
     private createHeader(contentEl: HTMLElement): void {
-        contentEl.createEl('h4', { text: 'Export transactions to hledger journal' });
+        contentEl.createEl('h3', { text: 'Export transactions to hledger journal' });
     }
     
     private createDateInputs(contentEl: HTMLElement): void {
@@ -81,7 +80,7 @@ export class HledgerExportModal extends Modal {
     
     private createFileOptions(contentEl: HTMLElement): void {
         new Setting(contentEl)
-            .setName('Journal File')
+            .setName('Journal file')
             .setDesc('Name for the exported journal file')
             .addText((text: TextComponent) => {
                 text.inputEl.setAttribute('type', 'text');
@@ -94,7 +93,7 @@ export class HledgerExportModal extends Modal {
             });
 
         new Setting(contentEl)
-            .setName('Replace Existing')
+            .setName('Replace existing')
             .setDesc('Replace file if it already exists')
             .addToggle((toggle) =>
                 toggle

@@ -1,6 +1,5 @@
-import { App, Modal, TFile, FuzzySuggestModal, Notice } from 'obsidian';
+import { App, Modal, TFile, FuzzySuggestModal, Notice, moment } from 'obsidian';
 import { HledgerSettings } from '../settings';
-import moment from 'moment';
 
 interface Entry {
     account: string;

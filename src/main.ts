@@ -1,4 +1,4 @@
-import { Plugin, Notice } from 'obsidian';
+import { Plugin, Notice, moment } from 'obsidian';
 import { HledgerSettingTab, HledgerSettings, DEFAULT_SETTINGS } from './settings';
 import { HledgerEntryModal } from './ui/entry-modal';
 import { HledgerExportModal } from './ui/export-modal';
@@ -23,7 +23,6 @@ import {
     normalizePath,
     FormatConfig 
 } from './utils';
-import * as moment from 'moment';
 
 export default class HledgerPlugin extends Plugin {
     settings: HledgerSettings;
@@ -31,7 +30,7 @@ export default class HledgerPlugin extends Plugin {
     async onload(): Promise<void> {
         await this.loadSettings();
 
-        this.addRibbonIcon('dollar-sign', 'Add hledger Entry', () => {
+        this.addRibbonIcon('dollar-sign', 'Add hledger entry', () => {
             new HledgerEntryModal(this.app, this.settings, this.handleEntry.bind(this)).open();
         });
 
@@ -39,7 +38,7 @@ export default class HledgerPlugin extends Plugin {
 
         this.addCommand({
             id: 'add-hledger-entry',
-            name: 'Add hledger Entry',
+            name: 'Add hledger entry',
             callback: () => {
                 new HledgerEntryModal(this.app, this.settings, this.handleEntry.bind(this)).open();
             }
@@ -86,7 +85,7 @@ export default class HledgerPlugin extends Plugin {
             lineLength: this.settings.transactionLineLength
         };
 
-        const dateObj = moment.default(date);
+        const dateObj = moment(date);
         
         const { targetFolder, targetPath } = calculateDailyNotePathInfo(
             dateObj,

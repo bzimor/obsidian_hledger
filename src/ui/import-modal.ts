@@ -1,6 +1,5 @@
-import { App, Modal, Setting, Notice } from 'obsidian';
+import { App, Modal, Setting, Notice, moment } from 'obsidian';
 import { HledgerSettings } from '../settings';
-import moment from 'moment';
 
 interface ImportOptions {
     fromDate: string;
@@ -57,7 +56,7 @@ export class HledgerImportModal extends Modal {
     }
     
     private createHeader(contentEl: HTMLElement): void {
-        contentEl.createEl('h4', { text: 'Import transactions from hledger journal' });
+        contentEl.createEl('h3', { text: 'Import transactions from hledger journal' });
     }
     
     private createWarningNote(contentEl: HTMLElement): void {
@@ -89,7 +88,7 @@ export class HledgerImportModal extends Modal {
     
     private createFileOptions(contentEl: HTMLElement): void {
         new Setting(contentEl)
-            .setName('Journal File')
+            .setName('Journal file')
             .setDesc('Journal file name to import transactions from')
             .addText(text => text
                 .setPlaceholder(this.options.journalFile)

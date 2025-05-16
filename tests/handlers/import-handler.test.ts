@@ -8,7 +8,7 @@ import {
 } from '../../src/handlers/import-handler';
 import { FormatConfig } from '../../src/utils';
 import { HledgerSettings } from '../../src/settings';
-import moment from 'moment';
+import { moment } from 'obsidian';
 
 // Mock the DataAdapter and formatLine function
 const mockAdapter = {

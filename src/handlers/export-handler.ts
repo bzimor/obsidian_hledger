@@ -1,5 +1,4 @@
-import * as moment from 'moment';
-import { DataAdapter } from 'obsidian';
+import { DataAdapter, moment } from 'obsidian';
 import { HledgerSettings } from '../settings';
 import { 
     extractHledgerBlock, 
@@ -88,13 +87,13 @@ export async function processHledgerFile(
                 const fileName = pathParts[pathParts.length - 1].replace(/\.md$/i, '');
                 const fullDateStr = `${dirName}/${fileName}`;
                 
-                parsedDate = moment.default(fullDateStr, dailyNotesDateFormat, true);
+                parsedDate = moment(fullDateStr, dailyNotesDateFormat, true);
             }
         } else {
             const filenameWithExt = filePath.split('/').pop() || filePath;
             const filenameWithoutExt = filenameWithExt.replace(/\.md$/, '');
             
-            parsedDate = moment.default(filenameWithoutExt, dailyNotesDateFormat, true);
+            parsedDate = moment(filenameWithoutExt, dailyNotesDateFormat, true);
         }
 
         if (!parsedDate || !parsedDate.isValid()) {
@@ -191,8 +190,8 @@ export function filterFilesByDateRange(
     toDateStr: string, 
     dateFormat: string
 ): string[] {
-    const fromMoment = moment.default(fromDateStr, 'YYYY-MM-DD');
-    const toMoment = moment.default(toDateStr, 'YYYY-MM-DD');
+    const fromMoment = moment(fromDateStr, 'YYYY-MM-DD');
+    const toMoment = moment(toDateStr, 'YYYY-MM-DD');
     
     return files.filter(filePath => {
         const normalizedFilePath = normalizePath(filePath);
@@ -211,13 +210,13 @@ export function filterFilesByDateRange(
                 const dirFormat = formatParts[0];
                 const fileFormat = formatParts[1];
                 
-                const dirDate = moment.default(dirName, dirFormat, true);
+                const dirDate = moment(dirName, dirFormat, true);
                 if (!dirDate.isValid()) {
                     return false;
                 }
                 
                 const fullDateStr = `${dirName}/${fileName}`;
-                const fileDate = moment.default(fullDateStr, dateFormat, true);
+                const fileDate = moment(fullDateStr, dateFormat, true);
                 
                 return fileDate.isValid() && fileDate.isBetween(fromMoment, toMoment, 'day', '[]');
             }
@@ -230,7 +229,7 @@ export function filterFilesByDateRange(
             return false;
         }
 
-        const fileDate = moment.default(basename, dateFormat, true);
+        const fileDate = moment(basename, dateFormat, true);
         return fileDate.isValid() && fileDate.isBetween(fromMoment, toMoment, 'day', '[]');
     });
 }

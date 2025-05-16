@@ -6,7 +6,7 @@ import {
     updateOrCreateDailyNoteHledgerSection
 } from '../../src/handlers/entry-handler';
 import { FormatConfig, NumberFormat } from '../../src/utils';
-import moment from 'moment';
+import { moment } from 'obsidian';
 
 // Mock the DataAdapter
 const mockAdapter = {

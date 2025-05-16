@@ -1,5 +1,4 @@
-import * as moment from 'moment';
-import { DataAdapter } from 'obsidian';
+import { DataAdapter, moment } from 'obsidian';
 import { HledgerSettings } from '../settings';
 import { 
     extractTransactionDate, 
@@ -30,14 +29,14 @@ export function groupTransactionsByDate(
     hledgerDateFormat: string
 ): Map<string, string[]> {
     const transactionsByDate = new Map<string, string[]>();
-    const fromMoment = moment.default(fromDate, hledgerDateFormat);
-    const toMoment = moment.default(toDate, hledgerDateFormat);
+    const fromMoment = moment(fromDate, hledgerDateFormat);
+    const toMoment = moment(toDate, hledgerDateFormat);
     
     for (const transaction of transactions) {
         const date = extractTransactionDate(transaction, hledgerDateFormat);
         if (!date) continue;
         
-        const momentDate = moment.default(date, hledgerDateFormat);
+        const momentDate = moment(date, hledgerDateFormat);
         
         if (momentDate.isBetween(fromMoment, toMoment, 'day', '[]')) {
             if (!transactionsByDate.has(date)) {
@@ -100,7 +99,7 @@ export async function getTargetNotePath(
     dailyNotesFolder: string,
     adapter: DataAdapter
 ): Promise<string> {
-    const momentDate = moment.default(date, hledgerDateFormat);
+    const momentDate = moment(date, hledgerDateFormat);
     let targetPath: string;
     
     if (dailyNotesDateFormat.includes('/')) {
@@ -244,7 +243,7 @@ export function extractDateFromLine(line: string, hledgerDateFormat: string): st
     const dateMatch = line.match(/^(\d{4}[-\/]\d{2}[-\/]\d{2})/);
     if (dateMatch) {
         const potentialDate = dateMatch[1];
-        if (moment.default(potentialDate, hledgerDateFormat, true).isValid()) {
+        if (moment(potentialDate, hledgerDateFormat, true).isValid()) {
             return potentialDate;
         }
     }

@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, TFolder, SearchComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, TFolder, SearchComponent, AbstractInputSuggest } from 'obsidian';
 import HledgerPlugin from './main';
 
 interface ExtendedSearchComponent extends SearchComponent {
@@ -40,6 +40,38 @@ export const DEFAULT_SETTINGS: HledgerSettings = {
     hledgerDateFormat: 'YYYY-MM-DD'
 };
 
+class FolderSuggest extends AbstractInputSuggest<string> {
+    inputEl: HTMLInputElement;
+    
+    constructor(app: App, inputEl: HTMLInputElement) {
+        super(app, inputEl);
+        this.inputEl = inputEl;
+    }
+
+    getSuggestions(inputStr: string): string[] {
+        const folders = this.app.vault.getAllLoadedFiles()
+            .filter((f): f is TFolder => f instanceof TFolder)
+            .map(folder => folder.path);
+        
+        if (inputStr) {
+            return folders.filter(folder => 
+                folder.toLowerCase().contains(inputStr.toLowerCase()));
+        }
+        
+        return folders;
+    }
+
+    renderSuggestion(value: string, el: HTMLElement): void {
+        el.setText(value);
+    }
+
+    selectSuggestion(value: string, evt: MouseEvent | KeyboardEvent): void {
+        this.inputEl.value = value;
+        this.inputEl.trigger("input");
+        this.close();
+    }
+}
+
 export class HledgerSettingTab extends PluginSettingTab {
     plugin: HledgerPlugin;
 
@@ -64,7 +96,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
             
-            this.setupFolderAutocomplete(search as ExtendedSearchComponent);
+            new FolderSuggest(this.app, (search as ExtendedSearchComponent).inputEl);
         });
 
     new Setting(containerEl)
@@ -103,7 +135,7 @@ export class HledgerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
                 
-                this.setupFolderAutocomplete(search as ExtendedSearchComponent);
+                new FolderSuggest(this.app, (search as ExtendedSearchComponent).inputEl);
             });
 
         new Setting(containerEl)
@@ -200,78 +232,5 @@ export class HledgerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-    }
-
-    private setupFolderAutocomplete(search: ExtendedSearchComponent): void {
-        const folders = this.app.vault.getAllLoadedFiles()
-            .filter((f): f is TFolder => f instanceof TFolder)
-            .map(folder => folder.path);
-        
-        const searchEl = search.containerEl;
-        searchEl.addClass('hledger-settings-search');
-        
-        let suggestionsShown = false;
-        
-        const removeSuggestions = () => {
-            const suggestionsContainer = searchEl.querySelector('.hledger-folder-suggestions');
-            if (suggestionsContainer) {
-                suggestionsContainer.remove();
-                document.removeEventListener('click', documentClickHandler);
-                suggestionsShown = false;
-            }
-        };
-        
-        const documentClickHandler = (e: MouseEvent) => {
-            if (!searchEl.contains(e.target as Node)) {
-                removeSuggestions();
-            }
-        };
-        
-        const showSuggestions = () => {
-            const currentValue = search.inputEl.value;
-            const suggestions = folders.filter(f => 
-                f.toLowerCase().contains(currentValue.toLowerCase()));
-            
-            removeSuggestions();
-            
-            if (suggestions.length === 0) {
-                return;
-            }
-            
-            const suggestionsContainer = createDiv('hledger-folder-suggestions');
-            searchEl.appendChild(suggestionsContainer);
-            suggestionsShown = true;
-            
-            suggestions.forEach(suggestion => {
-                const suggestionEl = suggestionsContainer.createDiv('hledger-suggestion-item');
-                suggestionEl.setText(suggestion);
-                
-                suggestionEl.addEventListener('mousedown', (e: MouseEvent) => {
-                    e.preventDefault();
-                    
-                    search.inputEl.value = suggestion;
-                    search.inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-                    
-                    removeSuggestions();
-                    
-                    setTimeout(() => {
-                        search.inputEl.focus();
-                        search.inputEl.blur();
-                    }, 10);
-                });
-            });
-            
-            document.addEventListener('click', documentClickHandler);
-        };
-        
-        search.inputEl.addEventListener('focus', showSuggestions);        
-        search.inputEl.addEventListener('input', showSuggestions);
-        search.inputEl.addEventListener('blur', (e: FocusEvent) => {
-            setTimeout(() => {
-                if (suggestionsShown && !(e.relatedTarget as Element)?.closest('.hledger-folder-suggestions')) {
-                    removeSuggestions();
-                }
-            }, 100);
-        });
     }
 }
