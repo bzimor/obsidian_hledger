@@ -153,7 +153,11 @@ export async function updateOrCreateDailyNoteHledgerSection(
                 const newContent = needsNewline ? '\n' + transactionContent : transactionContent;
                 finalContent = file.replace(hledgerRegex, () => `\`\`\`hledger\n${match[1]}${newContent}\`\`\``);
             } else {
-                finalContent = file.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
+                if (file.includes(transactionHeader)) {
+                    finalContent = file.trimEnd() + `\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
+                } else {
+                    finalContent = file.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
+                }
             }
         } else {
             finalContent = `${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
