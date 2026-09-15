@@ -135,7 +135,7 @@ export async function writeTransactionsToNote(
         
         const hledgerRegex = /```hledger\n([\s\S]*?)```/;
         if (existingContent.match(hledgerRegex)) {
-            finalContent = existingContent.replace(hledgerRegex, `\`\`\`hledger\n${transactionsContent}\`\`\``);
+            finalContent = existingContent.replace(hledgerRegex, () => `\`\`\`hledger\n${transactionsContent}\`\`\``);
         } else {
             finalContent = existingContent.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionsContent}\`\`\``;
         }
