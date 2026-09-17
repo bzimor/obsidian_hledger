@@ -121,10 +121,13 @@ export class HledgerEntryModal extends Modal {
             text: 'Transaction',
             value: 'transaction'
         });
-        typeToggle.createEl('option', {
-            text: 'Exchange',
-            value: 'exchange'
-        });
+        // Exchange transactions need at least two currencies to be meaningful.
+        if (this.settings.currencies.length >= 2) {
+            typeToggle.createEl('option', {
+                text: 'Exchange',
+                value: 'exchange'
+            });
+        }
 
         typeToggle.value = this.isExchange ? 'exchange' : 'transaction';
 
@@ -194,7 +197,7 @@ export class HledgerEntryModal extends Modal {
         if (this.isExchange) {
             this.entries = [
                 { account: '', amount: 0, currency: this.settings.currencies[0] },
-                { account: '', amount: 0, currency: this.settings.currencies[1] }
+                { account: '', amount: 0, currency: this.settings.currencies[1] ?? this.settings.currencies[0] }
             ];
             
             const addButton = leftButtons.querySelector('.hledger-add-account-button');
