@@ -214,7 +214,8 @@ export default class HledgerPlugin extends Plugin {
             new Notice('Daily transactions imported successfully');
         } catch (error) {
             console.error('Error importing daily transactions:', error);
-            new Notice('Error importing daily transactions: ' + error.message);
+            const message = error instanceof Error ? error.message : String(error);
+            new Notice('Error importing daily transactions: ' + message);
         }
     }
 }
