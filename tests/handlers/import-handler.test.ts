@@ -3,7 +3,8 @@ import {
     groupTransactionsByDate,
     removeTransactionDates,
     processTransactions,
-    formatHledgerTransaction
+    formatHledgerTransaction,
+    writeTransactionsToNote
 } from '../../src/handlers/import-handler';
 import { FormatConfig } from '../../src/utils';
 import { HledgerSettings } from '../../src/settings';
@@ -344,5 +345,59 @@ describe('Date range with reordered date formats', () => {
         );
 
         expect(grouped.size).toBe(2);
+    });
+});
+
+describe('Writing transactions to a note', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('does not repeat a header the note already has', async () => {
+        mockAdapter.exists.mockResolvedValue(true);
+        mockAdapter.read.mockResolvedValue('## Transactions\n');
+
+        await writeTransactionsToNote(
+            'notes/2023-01-15.md',
+            '2023-01-15 Groceries\n',
+            '## Transactions',
+            mockAdapter as any
+        );
+
+        const written = mockAdapter.write.mock.calls[0][1];
+        expect(written.match(/## Transactions/g)).toHaveLength(1);
+        expect(written).toContain('```hledger');
+    });
+
+    test('adds the header when the note does not have one', async () => {
+        mockAdapter.exists.mockResolvedValue(true);
+        mockAdapter.read.mockResolvedValue('Some existing note content\n');
+
+        await writeTransactionsToNote(
+            'notes/2023-01-15.md',
+            '2023-01-15 Groceries\n',
+            '## Transactions',
+            mockAdapter as any
+        );
+
+        const written = mockAdapter.write.mock.calls[0][1];
+        expect(written.match(/## Transactions/g)).toHaveLength(1);
+        expect(written).toContain('Some existing note content');
+    });
+
+    test('inserts amounts containing $1 literally', async () => {
+        mockAdapter.exists.mockResolvedValue(true);
+        mockAdapter.read.mockResolvedValue('```hledger\n2023-01-14 Lunch\n    Expenses:Food  $1000.00\n```\n');
+
+        await writeTransactionsToNote(
+            'notes/2023-01-15.md',
+            '2023-01-15 Coffee\n    Expenses:Food  $1500.00\n',
+            '## Transactions',
+            mockAdapter as any
+        );
+
+        const written = mockAdapter.write.mock.calls[0][1];
+        expect(written).toContain('$1500.00');
+        expect(written).not.toContain('Lunch');
     });
 }); 

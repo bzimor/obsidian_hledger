@@ -139,7 +139,11 @@ export async function writeTransactionsToNote(
         if (existingContent.match(hledgerRegex)) {
             finalContent = existingContent.replace(hledgerRegex, () => `\`\`\`hledger\n${transactionsContent}\`\`\``);
         } else {
-            finalContent = existingContent.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionsContent}\`\`\``;
+            if (existingContent.includes(transactionHeader)) {
+                finalContent = existingContent.trimEnd() + `\n\n\`\`\`hledger\n${transactionsContent}\`\`\``;
+            } else {
+                finalContent = existingContent.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionsContent}\`\`\``;
+            }
         }
     } else {
         finalContent = `${transactionHeader}\n\n\`\`\`hledger\n${transactionsContent}\`\`\``;
