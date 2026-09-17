@@ -6,7 +6,8 @@ import {
     getDateFromFilename,
     extractHledgerBlock,
     normalizePath,
-    getParentDirectory
+    getParentDirectory,
+    roundAmount
 } from '../src/utils';
 import { moment } from 'obsidian';
 
@@ -276,5 +277,26 @@ describe('Path utilities', () => {
     test('getParentDirectory works with normalized paths', () => {
         expect(getParentDirectory('C:/Users/name/file.txt')).toBe('C:/Users/name');
         expect(getParentDirectory('C:\\Users\\name\\file.txt')).toBe('C:/Users/name');
+    });
+});
+
+describe('Amount rounding', () => {
+    test('removes binary floating-point noise from sums', () => {
+        expect(roundAmount(12.19 + 10)).toBe(22.19);
+        expect(roundAmount(-(12.19 + 10))).toBe(-22.19);
+        expect(roundAmount(0.1 + 0.2)).toBe(0.3);
+    });
+
+    test('preserves legitimate decimals up to the precision limit', () => {
+        expect(roundAmount(1000.555)).toBe(1000.555);
+        expect(roundAmount(0.005)).toBe(0.005);
+        expect(roundAmount(1000.5)).toBe(1000.5);
+        expect(roundAmount(1000)).toBe(1000);
+    });
+
+    test('passes through non-finite values unchanged', () => {
+        expect(roundAmount(NaN)).toBeNaN();
+        expect(roundAmount(Infinity)).toBe(Infinity);
+        expect(roundAmount(-Infinity)).toBe(-Infinity);
     });
 }); 

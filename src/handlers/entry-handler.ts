@@ -2,6 +2,7 @@ import { DataAdapter, moment } from 'obsidian';
 import { 
     createDateRegexPattern, 
     ensureDirectoryExists, 
+    roundAmount,
     FormatConfig,
     NumberFormat
 } from '../utils';
@@ -10,7 +11,7 @@ import {
  * Formats a number according to the specified format
  */
 export function formatNumber(num: number, format: NumberFormat): string {
-    const parts = num.toString().split('.');
+    const parts = roundAmount(num).toString().split('.');
     const integerPart = parts[0];
     let decimalPart = parts[1] || '00';
     

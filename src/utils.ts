@@ -5,6 +5,15 @@ import { DataAdapter, moment } from 'obsidian';
  */
 
 /**
+ * Rounds away binary floating-point noise while preserving legitimate decimals.
+ * (8 decimal places = satoshi-level precision, more than enough for currency amounts.)
+ */
+export function roundAmount(value: number, maxDecimals = 8): number {
+    if (!Number.isFinite(value)) return value; // keep NaN/Infinity for downstream checks
+    return parseFloat(value.toFixed(maxDecimals));
+}
+
+/**
  * Creates a regex pattern for matching dates in hledger format
  */
 export function createDateRegexPattern(hledgerDateFormat: string): RegExp {

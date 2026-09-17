@@ -1,5 +1,6 @@
 import { App, Modal, TFile, FuzzySuggestModal, Notice, moment } from 'obsidian';
 import { HledgerSettings } from '../settings';
+import { roundAmount } from '../utils';
 
 interface Entry {
     account: string;
@@ -255,7 +256,7 @@ export class HledgerEntryModal extends Modal {
 
     private addNewEntry(entriesContainer: HTMLElement): void {
         const lastEntry = this.entries[this.entries.length - 1];
-        const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
+        const totalAmount = roundAmount(this.entries.reduce((sum, entry) => sum + entry.amount, 0));
         
         this.entries.push({
             account: '',
@@ -372,7 +373,7 @@ export class HledgerEntryModal extends Modal {
                 return false;
             }
             
-            const totalAmount = this.entries.reduce((sum, entry) => sum + entry.amount, 0);
+            const totalAmount = roundAmount(this.entries.reduce((sum, entry) => sum + entry.amount, 0));
             const epsilon = 0.0001;
             if (Math.abs(totalAmount) > epsilon) {
                 new Notice(`Transaction does not balance. Total is ${totalAmount.toFixed(2)}`);

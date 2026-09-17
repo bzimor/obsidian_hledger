@@ -52,6 +52,12 @@ describe('Number formatting functions', () => {
             expect(formatNumber(0.999, 'comma-dot')).toBe('0.999');
             expect(formatNumber(Number.MIN_SAFE_INTEGER, 'comma-dot')).toContain('-9,007,199,254,740,991.00');
         });
+
+        test('strips binary floating-point noise from summed amounts', () => {
+            expect(formatNumber(12.19 + 10, 'comma-dot')).toBe('22.19');
+            expect(formatNumber(-(12.19 + 10), 'comma-dot')).toBe('-22.19');
+            expect(formatNumber(0.1 + 0.2, 'comma-dot')).toBe('0.30');
+        });
     });
 
     describe('formatAmount', () => {
