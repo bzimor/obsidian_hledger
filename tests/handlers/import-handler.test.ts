@@ -369,6 +369,23 @@ describe('Writing transactions to a note', () => {
         expect(written).toContain('```hledger');
     });
 
+    test('files the block under the header, not under the last section', async () => {
+        mockAdapter.exists.mockResolvedValue(true);
+        mockAdapter.read.mockResolvedValue('## Transactions\n\n## Notes\n\nmy notes for today\n');
+
+        await writeTransactionsToNote(
+            'notes/2023-01-15.md',
+            '2023-01-15 Groceries\n',
+            '## Transactions',
+            mockAdapter as any
+        );
+
+        const written = mockAdapter.write.mock.calls[0][1];
+        expect(written.indexOf('```hledger')).toBeLessThan(written.indexOf('## Notes'));
+        expect(written).toContain('my notes for today');
+        expect(written.match(/## Transactions/g)).toHaveLength(1);
+    });
+
     test('adds the header when the note does not have one', async () => {
         mockAdapter.exists.mockResolvedValue(true);
         mockAdapter.read.mockResolvedValue('Some existing note content\n');

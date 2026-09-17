@@ -218,6 +218,23 @@ describe('Daily note hledger section update', () => {
         );
     });
 
+    test('files the block under the header, not under the last section', async () => {
+        mockAdapter.exists.mockResolvedValue(true);
+        mockAdapter.read.mockResolvedValue('## Transactions\n\n## Notes\n\nmy notes for today\n');
+
+        await updateOrCreateDailyNoteHledgerSection(
+            'path/to/note.md',
+            'transaction content',
+            '## Transactions',
+            mockAdapter as any
+        );
+
+        const written = mockAdapter.write.mock.calls[0][1];
+        expect(written.indexOf('```hledger')).toBeLessThan(written.indexOf('## Notes'));
+        expect(written).toContain('my notes for today');
+        expect(written.match(/## Transactions/g)).toHaveLength(1);
+    });
+
     test('updates existing hledger block', async () => {
         mockAdapter.exists.mockResolvedValue(true);
         mockAdapter.read.mockResolvedValue('# Note\n\n```hledger\nexisting transaction\n```');

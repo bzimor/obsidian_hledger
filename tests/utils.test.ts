@@ -7,7 +7,8 @@ import {
     extractHledgerBlock,
     normalizePath,
     getParentDirectory,
-    roundAmount
+    roundAmount,
+    insertBlockUnderHeader
 } from '../src/utils';
 import { moment } from 'obsidian';
 
@@ -298,5 +299,58 @@ describe('Amount rounding', () => {
         expect(roundAmount(NaN)).toBeNaN();
         expect(roundAmount(Infinity)).toBe(Infinity);
         expect(roundAmount(-Infinity)).toBe(-Infinity);
+    });
+});
+
+describe('Inserting a block under its header', () => {
+    const BLOCK = '```hledger\n2023-01-15 Coffee\n    Expenses:Food  $1.00\n```';
+
+    test('files the block inside the header section, not at the end of the note', () => {
+        const note = '## Transactions\n\n## Notes\n\nmy notes for today\n';
+
+        const result = insertBlockUnderHeader(note, '## Transactions', BLOCK);
+
+        expect(result).toBe('## Transactions\n\n' + BLOCK + '\n\n## Notes\n\nmy notes for today');
+        expect(result.indexOf(BLOCK)).toBeLessThan(result.indexOf('## Notes'));
+    });
+
+    test('appends within the header section when it already has content', () => {
+        const note = '## Transactions\n\nearlier line\n\n## Notes\n\nnotes\n';
+
+        const result = insertBlockUnderHeader(note, '## Transactions', BLOCK);
+
+        expect(result.indexOf('earlier line')).toBeLessThan(result.indexOf(BLOCK));
+        expect(result.indexOf(BLOCK)).toBeLessThan(result.indexOf('## Notes'));
+    });
+
+    test('adds the header when the note has none', () => {
+        const result = insertBlockUnderHeader('just some content\n', '## Transactions', BLOCK);
+
+        expect(result).toBe('just some content\n\n## Transactions\n\n' + BLOCK);
+    });
+
+    test('ignores the header text in prose or as a heading prefix', () => {
+        const note = 'see ## Transactions below\n\n## Transactions Archive\n\nold stuff\n';
+
+        const result = insertBlockUnderHeader(note, '## Transactions', BLOCK);
+
+        expect(result.match(/^## Transactions$/gm)).toHaveLength(1);
+        expect(result.trimEnd().endsWith(BLOCK)).toBe(true);
+    });
+
+    test('appends without a header line when the header setting is empty', () => {
+        const result = insertBlockUnderHeader('content\n', '   ', BLOCK);
+
+        expect(result).toBe('content\n\n' + BLOCK);
+    });
+
+    test('keeps CRLF notes on CRLF', () => {
+        const note = '## Transactions\r\n\r\n## Notes\r\n\r\nnotes\r\n';
+
+        const result = insertBlockUnderHeader(note, '## Transactions', BLOCK);
+
+        expect(result).not.toMatch(/[^\r]\n/);
+        expect(result).toContain('```hledger\r\n2023-01-15 Coffee');
+        expect(result.indexOf('hledger')).toBeLessThan(result.indexOf('## Notes'));
     });
 }); 

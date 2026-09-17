@@ -14,6 +14,50 @@ export function roundAmount(value: number, maxDecimals = 8): number {
 }
 
 /**
+ * Inserts a fenced hledger block into a note, under its transaction header.
+ *
+ * When the note already carries the header as a line of its own, the block is appended
+ * to the end of that header's section - the run of lines up to the next markdown heading -
+ * rather than to the end of the file, which would file the transactions under whichever
+ * section happens to come last. When the header is absent the block is appended at the
+ * end of the note, preceded by the header.
+ *
+ * The header is matched as a whole line, so the text appearing in prose or inside another
+ * code block does not count as the section already existing.
+ */
+export function insertBlockUnderHeader(content: string, header: string, block: string): string {
+    const eol = content.includes('\r\n') ? '\r\n' : '\n';
+    const normalizedBlock = block.split('\n').join(eol);
+    const trimmedHeader = header.trim();
+
+    if (!trimmedHeader) {
+        return content.trimEnd() + `${eol}${eol}${normalizedBlock}`;
+    }
+
+    const lines = content.split(/\r?\n/);
+    const headerIndex = lines.findIndex(line => line.trim() === trimmedHeader);
+
+    if (headerIndex === -1) {
+        return content.trimEnd() + `${eol}${eol}${header}${eol}${eol}${normalizedBlock}`;
+    }
+
+    let sectionEnd = lines.length;
+    for (let i = headerIndex + 1; i < lines.length; i++) {
+        if (/^#{1,6}\s/.test(lines[i])) {
+            sectionEnd = i;
+            break;
+        }
+    }
+
+    const before = lines.slice(0, sectionEnd).join(eol).trimEnd();
+    const after = lines.slice(sectionEnd).join(eol).trimEnd();
+
+    return after
+        ? `${before}${eol}${eol}${normalizedBlock}${eol}${eol}${after}`
+        : `${before}${eol}${eol}${normalizedBlock}`;
+}
+
+/**
  * Creates a regex pattern for matching dates in hledger format
  */
 export function createDateRegexPattern(hledgerDateFormat: string): RegExp {

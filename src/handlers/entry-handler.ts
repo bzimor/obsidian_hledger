@@ -2,6 +2,7 @@ import { DataAdapter, moment } from 'obsidian';
 import { 
     createDateRegexPattern, 
     ensureDirectoryExists, 
+    insertBlockUnderHeader,
     roundAmount,
     FormatConfig,
     NumberFormat
@@ -154,11 +155,8 @@ export async function updateOrCreateDailyNoteHledgerSection(
                 const newContent = needsNewline ? '\n' + transactionContent : transactionContent;
                 finalContent = file.replace(hledgerRegex, () => `\`\`\`hledger\n${match[1]}${newContent}\`\`\``);
             } else {
-                if (file.includes(transactionHeader)) {
-                    finalContent = file.trimEnd() + `\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
-                } else {
-                    finalContent = file.trimEnd() + `\n\n${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
-                }
+                const block = `\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
+                finalContent = insertBlockUnderHeader(file, transactionHeader, block);
             }
         } else {
             finalContent = `${transactionHeader}\n\n\`\`\`hledger\n${transactionContent.trimEnd()}\n\`\`\``;
