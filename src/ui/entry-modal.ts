@@ -42,6 +42,7 @@ export class HledgerEntryModal extends Modal {
     accounts: string[] = [];
     isExchange: boolean;
     exchangeAmount: number | null;
+    private secondAmountEdited = false;
 
     constructor(
         app: App,
@@ -65,6 +66,7 @@ export class HledgerEntryModal extends Modal {
         ];
         this.isExchange = false;
         this.exchangeAmount = null;
+        this.secondAmountEdited = false;
     }
 
     private setInitialDate(): void {
@@ -182,7 +184,8 @@ export class HledgerEntryModal extends Modal {
 
     private handleTypeToggle(isExchange: boolean, contentEl: HTMLElement): void {
         this.isExchange = isExchange;
-        
+        this.secondAmountEdited = false;
+
         const entriesContainer = contentEl.querySelector('.hledger-entries-container') as HTMLElement;
         const leftButtons = contentEl.querySelector('.hledger-left-buttons') as HTMLElement;
         
@@ -668,19 +671,27 @@ export class HledgerEntryModal extends Modal {
             cls: 'text-input hledger-amount-input'
         });
         
+        const isMirrorSource = index === 0 && !this.isExchange;
+        const isMirrorTarget = index === 1 && !this.isExchange;
+
         amountInput.addEventListener('input', (e) => {
             const target = e.target as HTMLInputElement;
-            let value = target.value.trim();
-            value = this.processAmountValue(value, entry, target);
+            this.processAmountValue(target.value.trim(), entry, target);
+
+            if (isMirrorSource) {
+                this.mirrorSecondAmount(container);
+            } else if (isMirrorTarget) {
+                // A real keystroke in row 2 stops the auto-mirror; clearing it resumes.
+                this.secondAmountEdited = target.value.trim() !== '';
+            }
         });
-        
+
         amountInput.addEventListener('change', (e) => {
             const target = e.target as HTMLInputElement;
-            let value = target.value.trim();
-            value = this.processAmountValue(value, entry, target);
-            
-            if (index === 0 && this.entries.length === 2 && !this.isExchange) {
-                this.updateSecondRowAmount(entry.amount, container);
+            this.processAmountValue(target.value.trim(), entry, target);
+
+            if (isMirrorSource) {
+                this.mirrorSecondAmount(container);
             }
         });
     }
@@ -738,13 +749,30 @@ export class HledgerEntryModal extends Modal {
         return value;
     }
     
-    private updateSecondRowAmount(firstRowAmount: number, container: HTMLElement): void {
-        const secondRow = this.entries[1];
+    /**
+     * Mirrors the negative of the row-1 amount into row 2, keeping the transaction
+     * balanced automatically. Runs on every keystroke in row 1 (live), but only while
+     * row 2 has not been manually edited. Writing `.value` programmatically does not
+     * fire an `input` event, so this never trips the `secondAmountEdited` flag itself.
+     */
+    private mirrorSecondAmount(container: HTMLElement): void {
+        if (this.isExchange || this.entries.length !== 2 || this.secondAmountEdited) {
+            return;
+        }
+
         const secondAmountInput = container.querySelectorAll('.hledger-amount-input')[1] as HTMLInputElement;
-        
-        if (secondAmountInput && !Number.isNaN(firstRowAmount) && (secondAmountInput.value === '' || secondAmountInput.value === '0')) {
-            secondRow.amount = -firstRowAmount;
-            secondAmountInput.value = (-firstRowAmount).toString();
+        if (!secondAmountInput) {
+            return;
+        }
+
+        const firstAmount = this.entries[0].amount;
+        if (Number.isNaN(firstAmount)) {
+            this.entries[1].amount = NaN;
+            secondAmountInput.value = '';
+        } else {
+            const mirrored = roundAmount(-firstAmount);
+            this.entries[1].amount = mirrored;
+            secondAmountInput.value = mirrored.toString();
         }
     }
 
