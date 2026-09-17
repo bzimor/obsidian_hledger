@@ -325,4 +325,42 @@ describe('Date extraction from line', () => {
     test('extracts date only from beginning of line', () => {
         expect(extractDateFromLine('Text before 2023-01-15', 'YYYY-MM-DD')).toBeNull();
     });
+});
+
+describe('Date range with reordered date formats', () => {
+    // The from/to boundaries come from ISO date pickers even when the journal uses a
+    // reordered format like DD/MM/YYYY. Regression test for imports silently matching nothing.
+    const transactions = [
+        `15/01/2023 Groceries
+    Expenses:Food      $50.00
+    Assets:Checking    $-50.00`,
+
+        `20/02/2023 Rent
+    Expenses:Rent      $1000.00
+    Assets:Checking    $-1000.00`
+    ];
+
+    test('filters DD/MM/YYYY transactions using ISO from/to boundaries', () => {
+        const grouped = groupTransactionsByDate(
+            transactions,
+            '2023-01-10',
+            '2023-01-31',
+            'DD/MM/YYYY'
+        );
+
+        expect(grouped.size).toBe(1);
+        expect(grouped.has('15/01/2023')).toBe(true);
+        expect(grouped.has('20/02/2023')).toBe(false);
+    });
+
+    test('includes both dates when the ISO range spans them', () => {
+        const grouped = groupTransactionsByDate(
+            transactions,
+            '2023-01-01',
+            '2023-12-31',
+            'DD/MM/YYYY'
+        );
+
+        expect(grouped.size).toBe(2);
+    });
 }); 

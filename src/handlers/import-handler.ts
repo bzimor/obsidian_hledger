@@ -29,8 +29,11 @@ export function groupTransactionsByDate(
     hledgerDateFormat: string
 ): Map<string, string[]> {
     const transactionsByDate = new Map<string, string[]>();
-    const fromMoment = moment(fromDate, hledgerDateFormat);
-    const toMoment = moment(toDate, hledgerDateFormat);
+    // fromDate/toDate come from HTML date pickers and are always ISO (YYYY-MM-DD),
+    // regardless of the journal's hledgerDateFormat. Parsing them with hledgerDateFormat
+    // fails for reordered formats (e.g. DD/MM/YYYY), which silently filters out everything.
+    const fromMoment = moment(fromDate, 'YYYY-MM-DD');
+    const toMoment = moment(toDate, 'YYYY-MM-DD');
     
     for (const transaction of transactions) {
         const date = extractTransactionDate(transaction, hledgerDateFormat);
