@@ -3,7 +3,6 @@ import { HledgerSettings } from '../settings';
 import { 
     extractTransactionDate, 
     createDateRemovalRegex, 
-    getDateFromFilename,
     ensureDirectoryExists,
     FormatConfig
 } from '../utils';
@@ -238,17 +237,3 @@ export function formatHledgerTransaction(
 
     return content.trimEnd(); 
 }
-
-/**
- * Extracts the date from the first line of a string
- */
-export function extractDateFromLine(line: string, hledgerDateFormat: string): string | null {
-    const dateMatch = line.match(/^(\d{4}[-\/]\d{2}[-\/]\d{2})/);
-    if (dateMatch) {
-        const potentialDate = dateMatch[1];
-        if (moment(potentialDate, hledgerDateFormat, true).isValid()) {
-            return potentialDate;
-        }
-    }
-    return null;
-} 

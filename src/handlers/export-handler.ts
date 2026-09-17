@@ -2,7 +2,6 @@ import { DataAdapter, moment } from 'obsidian';
 import { HledgerSettings } from '../settings';
 import { 
     extractHledgerBlock, 
-    getDateFromFilename, 
     normalizePath, 
     ensureDirectoryExists,
     getParentDirectory,

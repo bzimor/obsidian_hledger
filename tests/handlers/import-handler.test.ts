@@ -3,8 +3,7 @@ import {
     groupTransactionsByDate,
     removeTransactionDates,
     processTransactions,
-    formatHledgerTransaction,
-    extractDateFromLine
+    formatHledgerTransaction
 } from '../../src/handlers/import-handler';
 import { FormatConfig } from '../../src/utils';
 import { HledgerSettings } from '../../src/settings';
@@ -307,23 +306,6 @@ describe('Transaction formatting', () => {
         
         expect(result).not.toContain('2023-01-15');
         expect(result).toContain('Groceries');
-    });
-});
-
-describe('Date extraction from line', () => {
-    test('extracts date from line beginning', () => {
-        expect(extractDateFromLine('2023-01-15 Groceries', 'YYYY-MM-DD')).toBe('2023-01-15');
-        expect(extractDateFromLine('2023/01/15 Rent', 'YYYY/MM/DD')).toBe('2023/01/15');
-    });
-    
-    test('returns null for invalid date format', () => {
-        expect(extractDateFromLine('15-01-2023 Groceries', 'YYYY-MM-DD')).toBeNull();
-        expect(extractDateFromLine('Not a date', 'YYYY-MM-DD')).toBeNull();
-        expect(extractDateFromLine('', 'YYYY-MM-DD')).toBeNull();
-    });
-    
-    test('extracts date only from beginning of line', () => {
-        expect(extractDateFromLine('Text before 2023-01-15', 'YYYY-MM-DD')).toBeNull();
     });
 });
 
