@@ -6,9 +6,26 @@ interface Entry {
     account: string;
     amount: number;
     currency: string;
+    /**
+     * Set once the user types an amount into this row by hand. It lives on the entry
+     * rather than on a row index so that it follows the row when other rows are
+     * added or deleted, which is what keeps the auto-balance from overwriting it.
+     */
+    amountEdited?: boolean;
 }
 
 type EntryModalCallback = (date: string, description: string, entries: Entry[]) => void;
+
+/**
+ * Whether the balancing auto-fill may write into the second row.
+ *
+ * It may not once the user has typed that row's amount by hand. Because the flag lives on
+ * the entry rather than on the row index, it keeps protecting the row after other rows are
+ * added or deleted and the row moves position.
+ */
+export function canMirrorSecondAmount(entries: Entry[], isExchange: boolean): boolean {
+    return !isExchange && entries.length === 2 && !entries[1].amountEdited;
+}
 
 class AccountSuggestModal extends FuzzySuggestModal<string> {
     private accounts: string[];
@@ -42,7 +59,6 @@ export class HledgerEntryModal extends Modal {
     accounts: string[] = [];
     isExchange: boolean;
     exchangeAmount: number | null;
-    private secondAmountEdited = false;
 
     constructor(
         app: App,
@@ -66,7 +82,6 @@ export class HledgerEntryModal extends Modal {
         ];
         this.isExchange = false;
         this.exchangeAmount = null;
-        this.secondAmountEdited = false;
     }
 
     private setInitialDate(): void {
@@ -184,7 +199,6 @@ export class HledgerEntryModal extends Modal {
 
     private handleTypeToggle(isExchange: boolean, contentEl: HTMLElement): void {
         this.isExchange = isExchange;
-        this.secondAmountEdited = false;
 
         const entriesContainer = contentEl.querySelector('.hledger-entries-container') as HTMLElement;
         const leftButtons = contentEl.querySelector('.hledger-left-buttons') as HTMLElement;
@@ -672,17 +686,16 @@ export class HledgerEntryModal extends Modal {
         });
         
         const isMirrorSource = index === 0 && !this.isExchange;
-        const isMirrorTarget = index === 1 && !this.isExchange;
 
         amountInput.addEventListener('input', (e) => {
             const target = e.target as HTMLInputElement;
             this.processAmountValue(target.value.trim(), entry, target);
 
+            // A real keystroke claims the row; clearing the field hands it back.
+            entry.amountEdited = target.value.trim() !== '';
+
             if (isMirrorSource) {
                 this.mirrorSecondAmount(container);
-            } else if (isMirrorTarget) {
-                // A real keystroke in row 2 stops the auto-mirror; clearing it resumes.
-                this.secondAmountEdited = target.value.trim() !== '';
             }
         });
 
@@ -753,10 +766,10 @@ export class HledgerEntryModal extends Modal {
      * Mirrors the negative of the row-1 amount into row 2, keeping the transaction
      * balanced automatically. Runs on every keystroke in row 1 (live), but only while
      * row 2 has not been manually edited. Writing `.value` programmatically does not
-     * fire an `input` event, so this never trips the `secondAmountEdited` flag itself.
+     * fire an `input` event, so this never marks the row as edited itself.
      */
     private mirrorSecondAmount(container: HTMLElement): void {
-        if (this.isExchange || this.entries.length !== 2 || this.secondAmountEdited) {
+        if (!canMirrorSecondAmount(this.entries, this.isExchange)) {
             return;
         }
 
