@@ -112,6 +112,25 @@ Some random text here
         expect(transactions[0]).toContain('; Comment on posting');
         expect(transactions[0]).toContain('    ; Indented comment');
     });
+
+    test('parseJournalTransactions handles CRLF line endings', () => {
+        const content = [
+            '2023-01-15 Groceries',
+            '    Expenses:Food      $50.00',
+            '    Assets:Checking    $-50.00',
+            '',
+            '2023-01-20 Rent payment',
+            '    Expenses:Rent      $1000.00',
+            '    Assets:Checking    $-1000.00'
+        ].join('\r\n');
+
+        const transactions = parseJournalTransactions(content, 'YYYY-MM-DD');
+
+        expect(transactions).toHaveLength(2);
+        expect(transactions[0]).toBe('2023-01-15 Groceries\n    Expenses:Food      $50.00\n    Assets:Checking    $-50.00');
+        expect(transactions[1]).toContain('2023-01-20 Rent payment');
+        transactions.forEach(transaction => expect(transaction).not.toContain('\r'));
+    });
 });
 
 describe('Transaction date extraction', () => {

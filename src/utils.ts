@@ -40,7 +40,7 @@ export function parseJournalTransactions(content: string, hledgerDateFormat: str
     let currentTransactionLines: string[] = [];
     
     const dateRegex = createDateRegexPattern(hledgerDateFormat);
-    const lines = content.split('\n');
+    const lines = content.split(/\r?\n/);
 
     for (const line of lines) {
         if (dateRegex.test(line)) {

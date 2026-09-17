@@ -141,7 +141,7 @@ export async function updateOrCreateDailyNoteHledgerSection(
 
         if (fileExists) {
             const file = await adapter.read(targetPath);
-            const hledgerRegex = /```hledger\n([\s\S]*?)```/;
+            const hledgerRegex = /```hledger\r?\n([\s\S]*?)```/i;
             const match = file.match(hledgerRegex);
 
             if (match) {

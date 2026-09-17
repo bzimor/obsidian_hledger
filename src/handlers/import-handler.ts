@@ -133,7 +133,7 @@ export async function writeTransactionsToNote(
     if (fileExists) {
         const existingContent = await adapter.read(targetPath);
         
-        const hledgerRegex = /```hledger\n([\s\S]*?)```/;
+        const hledgerRegex = /```hledger\r?\n([\s\S]*?)```/i;
         if (existingContent.match(hledgerRegex)) {
             finalContent = existingContent.replace(hledgerRegex, () => `\`\`\`hledger\n${transactionsContent}\`\`\``);
         } else {
